@@ -1,0 +1,36 @@
+--Generate Date Dimension Table for BigQuery - adjust date range as required
+--this is a modified version of ewhauser/date_dim.sql gist
+SELECT
+  d as id,
+  FORMAT_DATE('%Y-%m', d) as yearMonth,
+  FORMAT_DATE('%F', d) as yearMonthDay,
+  EXTRACT(YEAR FROM d) AS year,
+  EXTRACT(MONTH FROM d) AS month,
+  FORMAT_DATE('%m', d) as monthPadded,
+  EXTRACT(DAY FROM d) as day,  
+  FORMAT_DATE('%d', d) as dayPadded,
+  FORMAT_DATE('%w', d) AS dayOfWeek, --0=sunday
+  --FORMAT_DATE('%u', d) AS dayOfWeek2, --7=sunday
+  FORMAT_DATE('%j', d) as dayOfYear,
+  FORMAT_DATE('%Q', d) as quarter,
+  EXTRACT(WEEK FROM d) AS weekNumber, --assuming Sunday is the first day of the week
+  --FORMAT_DATE('%U', d) as weekNumber3, --assuming Sunday is the first day of the week
+  --FORMAT_DATE('%W', d) as weekNumber2, --assuming Monday is the first day of the week  
+  FORMAT_DATE('%a', d) AS dayName,
+  FORMAT_DATE('%A', d) AS dayNameLong,
+  FORMAT_DATE('%b', d) as monthName,
+  FORMAT_DATE('%B', d) as monthNameLong,
+  --FORMAT_DATE('%e', d) as dayString,
+  FORMAT_DATE('%d/%m/%Y', d) as dateFormatUK,
+  FORMAT_DATE('%A %B%e, %Y', d) as dateFormatLong,
+  CASE WHEN FORMAT_DATE('%A', d) IN ('Sunday', 'Saturday') THEN True ELSE False END AS weekend,
+  --calc financial year & month (based on April being Month 1)
+  CASE WHEN EXTRACT(MONTH FROM d) < 4 THEN 
+   (EXTRACT(YEAR FROM d) -1) || '-' || EXTRACT(YEAR FROM d) ELSE EXTRACT(YEAR FROM d) || '-' || (EXTRACT(YEAR FROM d) + 1) END as financialYear,
+  CASE WHEN EXTRACT(MONTH FROM d) > 3 THEN 
+   '0'||(EXTRACT(MONTH FROM d) - 3) ELSE ''||(EXTRACT(MONTH FROM d) + 9) END as financialMonth,
+FROM (
+  SELECT
+    *
+  FROM
+    UNNEST(GENERATE_DATE_ARRAY('2020-01-01', '2022-01-01', INTERVAL 1 DAY)) AS d )
