@@ -1,0 +1,93 @@
+ALTER FUNCTION dbo.udfDateDiffBusinessHours (
+  @date1 DATETIME,
+  @date2 DATETIME
+) RETURNS DATETIME AS
+BEGIN
+  DECLARE @sat INT
+  DECLARE @sun INT
+  DECLARE @workday_s INT
+  DECLARE @workday_e INT
+  DECLARE @basedate1 DATETIME
+  DECLARE @basedate2 DATETIME
+  DECLARE @calcdate1 DATETIME
+  DECLARE @calcdate2 DATETIME
+  DECLARE @iteratordate DATETIME
+  DECLARE @cworkdays INT
+  DECLARE @coffdays INT
+  DECLARE @returnval INT
+
+  SET @workday_s = 480 -- work day start:  8 hours
+  SET @workday_e = 1080 -- work day end:   18 hours
+
+    -- calculate Saturday and Sunday dependent on SET DATEFIRST option
+  SET @sat = CASE @@DATEFIRST WHEN 7 THEN 7 ELSE 7 - @@DATEFIRST END 
+  SET @sun = CASE @@DATEFIRST WHEN 7 THEN 1 ELSE @sat + 1 END 
+
+  SET @calcdate1 = @date1
+  SET @calcdate2 = @date2
+
+  -- @date1: assume next day if start was after end of workday
+  SET @basedate1 = DATEADD(dd, 0, DATEDIFF(dd, 0, @calcdate1))
+  SET @calcdate1 = CASE WHEN DATEDIFF(mi, @basedate1, @calcdate1) > @workday_e
+                   THEN @basedate1 + 1
+                   ELSE @calcdate1
+                   END
+
+  -- @date1: if Saturday or Sunday, make it next Monday
+  SET @basedate1 = DATEADD(dd, 0, DATEDIFF(dd, 0, @calcdate1))
+  SET @calcdate1 = CASE DATEPART(dw, @basedate1)
+                   WHEN @sat THEN @basedate1 + 2
+                   WHEN @sun THEN @basedate1 + 1
+                   ELSE @calcdate1
+                   END
+
+  -- @date1: assume @workday_s as the minimum start time
+  SET @basedate1 = DATEADD(dd, 0, DATEDIFF(dd, 0, @calcdate1))
+  SET @calcdate1 = CASE WHEN DATEDIFF(mi, @basedate1, @calcdate1) < @workday_s 
+                   THEN DATEADD(mi, @workday_s, @basedate1)
+                   ELSE @calcdate1
+                   END
+
+  -- @date2: assume previous day if end was before start of workday
+  SET @basedate2 = DATEADD(dd, 0, DATEDIFF(dd, 0, @calcdate2))
+  SET @calcdate2 = CASE WHEN DATEDIFF(mi, @basedate2, @calcdate2) < @workday_s
+                   THEN DATEADD(mi, @workday_e, @basedate2 - 1)
+                   ELSE @calcdate2
+                   END
+
+  -- @date2: if Saturday or Sunday, make it previous Friday
+  SET @basedate2 = DATEADD(dd, 0, DATEDIFF(dd, 0, @calcdate2))
+  SET @calcdate2 = CASE DATEPART(dw, @calcdate2)
+                   WHEN @sat THEN @basedate2 - 0.00001
+                   WHEN @sun THEN @basedate2 - 1.00001
+                   ELSE @date2
+                   END
+
+  -- @date2: assume @workday_e as the maximum end time
+  SET @basedate2 = DATEADD(dd, 0, DATEDIFF(dd, 0, @calcdate2))
+  SET @calcdate2 = CASE WHEN DATEDIFF(mi, @basedate2, @calcdate2) > @workday_e
+                   THEN DATEADD(mi, @workday_e, @basedate2)
+                   ELSE @calcdate2
+                   END
+
+  -- count full work days (subtract Saturdays, Sundays and holidays)
+  SET @cworkdays = DATEDIFF(dd, @basedate1, @basedate2)
+  SET @iteratordate = @basedate1
+  SET @coffdays = 0
+
+  WHILE DATEDIFF(dd, @iteratordate, @basedate2) > 0
+  BEGIN
+    IF DATEPART(dw, @iteratordate) = @sat OR DATEPART(dw, @iteratordate) = @sun OR EXISTS (SELECT holidaydate FROM dbo.holidays_lu (NOLOCK) WHERE holidaydate = @iteratordate)
+        SET @coffdays = @coffdays + 1
+    SET @iteratordate = DATEADD(dd, 1, @iteratordate)
+  END
+  SET @cworkdays = @cworkdays - @coffdays
+
+  -- calculate effective duration in minutes
+  SET @returnval = @cworkdays * (@workday_e - @workday_s)
+                   + @workday_e - DATEDIFF(mi, @basedate1, @calcdate1) 
+                   + DATEDIFF(mi, @basedate2, @calcdate2) - @workday_e
+
+  -- return duration as an offset in minutes from date 0
+  RETURN DATEADD(mi, @returnval, 0)
+END
