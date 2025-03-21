@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('UI/styles'); ?>
+  </head>
+  <body>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Evaluation Form</h2>
+        <button id="closeBtn" class="secondary">
+          <i class="material-icons">close</i> Close
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Selection Form (Step 1) -->
+        <div id="selectionFormStep" class="step active">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Select Audit to Evaluate</h3>
+            </div>
+            
+            <div class="mb-16">
+              <label for="auditSelector">Available Audits:</label>
+              <select id="auditSelector">
+                <option value="" disabled selected>-- Select an audit --</option>
+              </select>
+              
+              <div id="auditDetails" class="mt-16" style="display: none;">
+                <div class="flex justify-between mb-8">
+                  <strong>Agent:</strong>
+                  <span id="agentName"></span>
+                </div>
+                <div class="flex justify-between mb-8">
+                  <strong>Customer ID:</strong>
+                  <span id="customerId"></span>
+                </div>
+                <div class="flex justify-between mb-8">
+                  <strong>Date:</strong>
+                  <span id="auditDate"></span>
+                </div>
+                <div class="flex justify-between mb-8">
+                  <strong>Interaction Type:</strong>
+                  <span id="interactionType"></span>
+                </div>
+                <div class="flex justify-between mb-8">
+                  <strong>Duration:</strong>
+                  <span id="duration"></span>
+                </div>
+              </div>
+            </div>
+            
+            <button id="startEvaluationBtn" class="w-full" disabled>
+              <i class="material-icons">assignment</i> Start Evaluation
+            </button>
+          </div>
+        </div>
+        
+        <!-- Evaluation Form (Step 2) -->
+        <div id="evaluationFormStep" class="step">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">
+                Evaluation for <span id="evaluationAgentName"></span>
+              </h3>
+              <span class="status-badge status-pending">In Progress</span>
+            </div>
+            
+            <div class="mb-16">
+              <div class="flex justify-between mb-8">
+                <strong>Interaction Type:</strong>
+                <span id="evalInteractionType"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Date:</strong>
+                <span id="evalDate"></span>
+              </div>
+            </div>
+            
+            <form id="evaluationForm">
+              <input type="hidden" id="auditId" name="auditId">
+              <input type="hidden" id="questionSetId" name="questionSetId">
+              
+              <div id="questionSections">
+                <!-- Questions will be populated here dynamically -->
+                <div class="loading-spinner">
+                  <div class="spinner"></div>
+                  <p>Loading questions...</p>
+                </div>
+              </div>
+              
+              <div class="card mt-24">
+                <h3>Overall Comments</h3>
+                <textarea id="overallComments" name="overallComments" rows="4" placeholder="Enter overall feedback for this evaluation..."></textarea>
+                
+                <div class="flex gap-16 mb-16">
+                  <div class="flex-1">
+                    <label for="strengths">Strengths:</label>
+                    <textarea id="strengths" name="strengths" rows="3" placeholder="What did the agent do well?"></textarea>
+                  </div>
+                  <div class="flex-1">
+                    <label for="improvements">Areas for Improvement:</label>
+                    <textarea id="improvements" name="improvements" rows="3" placeholder="What could the agent improve?"></textarea>
+                  </div>
+                </div>
+                
+                <div class="card bg-light">
+                  <div class="flex justify-between">
+                    <div><strong>Current Score:</strong> <span id="currentScore">0</span> / <span id="maxScore">0</span></div>
+                    <div><strong>Percentage:</strong> <span id="scorePercentage">0%</span></div>
+                  </div>
+                  <div class="progress-bar mt-8">
+                    <div class="progress-fill" id="scoreProgressFill" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Summary Form (Step 3) -->
+        <div id="summaryFormStep" class="step">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Evaluation Summary</h3>
+            </div>
+            
+            <div class="mb-16">
+              <div class="flex justify-between mb-8">
+                <strong>Agent:</strong>
+                <span id="summaryAgentName"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Date:</strong>
+                <span id="summaryDate"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Overall Score:</strong>
+                <span id="summaryScore"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Result:</strong>
+                <span id="summaryResult"></span>
+              </div>
+            </div>
+            
+            <div class="card bg-light">
+              <h4>Score Breakdown</h4>
+              <div id="scoreSummary">
+                <!-- Score breakdown will be populated here -->
+              </div>
+            </div>
+            
+            <div class="mt-16">
+              <h4>Send Notifications</h4>
+              <div class="flex gap-8 items-center">
+                <input type="checkbox" id="notifyAgent" name="notifyAgent" checked>
+                <label for="notifyAgent" style="margin-bottom: 0;">Notify Agent</label>
+              </div>
+              <div class="flex gap-8 items-center">
+                <input type="checkbox" id="notifyManager" name="notifyManager" checked>
+                <label for="notifyManager" style="margin-bottom: 0;">Notify Manager</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button id="backBtn" class="secondary" style="display: none;">
+          <i class="material-icons">arrow_back</i> Back
+        </button>
+        <button id="nextBtn" class="primary" style="display: none;">
+          <i class="material-icons">arrow_forward</i> Next
+        </button>
+        <button id="submitBtn" class="primary" style="display: none;">
+          <i class="material-icons">check</i> Submit Evaluation
+        </button>
+        <button id="cancelBtn" class="secondary">Cancel</button>
+      </div>
+    </div>
+    
+    <?!= include('UI/scripts'); ?>
+    <script>
+      // Variables to store the current state
+      let currentStep = 1;
+      let questions = [];
+      let totalSteps = 3;
+      let selectedAudit = null;
+      let scoringData = {
+        total: 0,
+        possible: 0,
+        sections: {}
+      };
+      
+      // Initialize the form when the page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        // Set up event listeners
+        document.getElementById('closeBtn').addEventListener('click', closeDialog);
+        document.getElementById('cancelBtn').addEventListener('click', closeDialog);
+        document.getElementById('backBtn').addEventListener('click', goToPreviousStep);
+        document.getElementById('nextBtn').addEventListener('click', goToNextStep);
+        document.getElementById('submitBtn').addEventListener('click', submitEvaluation);
+        document.getElementById('auditSelector').addEventListener('change', loadAuditDetails);
+        document.getElementById('startEvaluationBtn').addEventListener('click', startEvaluation);
+        
+        // Load available audits
+        loadAvailableAudits();
+        
+        // Set up the initial UI state
+        updateNavigationButtons();
+      });
+      
+      function loadAvailableAudits() {
+        showNotification('Loading available audits...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(populateAuditSelector)
+          .withFailureHandler(handleError)
+          .getAvailableAudits();
+      }
+      
+      function populateAuditSelector(audits) {
+        if (!audits || audits.length === 0) {
+          showNotification('No audits available for evaluation', 'warning');
+          return;
+        }
+        
+        const auditSelector = document.getElementById('auditSelector');
+        
+        // Add options for each audit
+        audits.forEach(audit => {
+          const option = document.createElement('option');
+          option.value = audit.ID;
+          option.textContent = `${audit.Agent} - ${formatDate(audit.Date)} - ${audit['Interaction Type']}`;
+          option.dataset.audit = JSON.stringify(audit);
+          auditSelector.appendChild(option);
+        });
+      }
+      
+      function loadAuditDetails() {
+        const auditSelector = document.getElementById('auditSelector');
+        const selectedOption = auditSelector.options[auditSelector.selectedIndex];
+        
+        if (selectedOption.value) {
+          selectedAudit = JSON.parse(selectedOption.dataset.audit);
+          
+          // Display audit details
+          document.getElementById('auditDetails').style.display = 'block';
+          document.getElementById('agentName').textContent = selectedAudit.Agent;
+          document.getElementById('customerId').textContent = selectedAudit.Customer;
+          document.getElementById('auditDate').textContent = formatDate(selectedAudit.Date);
+          document.getElementById('interactionType').textContent = selectedAudit['Interaction Type'];
+          document.getElementById('duration').textContent = selectedAudit.Duration + ' minutes';
+          
+          // Enable start button
+          document.getElementById('startEvaluationBtn').disabled = false;
+        } else {
+          document.getElementById('auditDetails').style.display = 'none';
+          document.getElementById('startEvaluationBtn').disabled = true;
+        }
+      }
+      
+      function startEvaluation() {
+        if (!selectedAudit) return;
+        
+        // Set the audit ID in the form
+        document.getElementById('auditId').value = selectedAudit.ID;
+        
+        // Fill in the evaluation form header
+        document.getElementById('evaluationAgentName').textContent = selectedAudit.Agent;
+        document.getElementById('evalInteractionType').textContent = selectedAudit['Interaction Type'];
+        document.getElementById('evalDate').textContent = formatDate(selectedAudit.Date);
+        
+        // Load questions for this type of interaction
+        loadQuestions(selectedAudit['Interaction Type']);
+        
+        // Go to the next step
+        goToNextStep();
+      }
+      
+      function loadQuestions(interactionType) {
+        showNotification('Loading evaluation questions...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(buildQuestionForm)
+          .withFailureHandler(handleError)
+          .getQuestionSetForInteraction(interactionType);
+      }
+      
+      function buildQuestionForm(questionSet) {
+        if (!questionSet || !questionSet.questions || questionSet.questions.length === 0) {
+          showNotification('No questions found for this interaction type', 'error');
+          return;
+        }
+        
+        // Store the question set
+        document.getElementById('questionSetId').value = questionSet.id;
+        questions = questionSet.questions;
+        
+        // Build sections
+        const sectionsContainer = document.getElementById('questionSections');
+        sectionsContainer.innerHTML = '';
+        
+        // Group questions by section
+        const sections = {};
+        questions.forEach(question => {
+          if (!sections[question.section]) {
+            sections[question.section] = [];
+          }
+          sections[question.section].push(question);
+        });
+        
+        // Initialize scoring data
+        scoringData.total = 0;
+        scoringData.possible = 0;
+        scoringData.sections = {};
+        
+        // Create HTML for each section
+        Object.keys(sections).forEach(sectionName => {
+          const sectionQuestions = sections[sectionName];
+          const sectionElement = createSection(sectionName, sectionQuestions);
+          sectionsContainer.appendChild(sectionElement);
+          
+          // Initialize section score
+          scoringData.sections[sectionName] = {
+            total: 0,
+            possible: 0
+          };
+          
+          // Calculate total possible score
+          sectionQuestions.forEach(question => {
+            scoringData.possible += question.weight;
+            scoringData.sections[sectionName].possible += question.weight;
+          });
+        });
+        
+        // Update score display
+        document.getElementById('maxScore').textContent = scoringData.possible;
+        updateScore();
+        
+        showNotification('Questions loaded', 'success');
+      }
+      
+      function createSection(sectionName, questions) {
+        const section = document.createElement('div');
+        section.className = 'question-section';
+        
+        // Create section header
+        const header = document.createElement('div');
+        header.className = 'card-header';
+        header.innerHTML = `<h3 class="card-title">${sectionName}</h3>`;
+        section.appendChild(header);
+        
+        // Create questions
+        questions.forEach(question => {
+          const questionElement = createQuestion(question);
+          section.appendChild(questionElement);
+        });
+        
+        return section;
+      }
+      
+      function createQuestion(question) {
+        const questionElement = document.createElement('div');
+        questionElement.className = 'question-item mb-16';
+        questionElement.dataset.questionId = question.id;
+        
+        // Create question header
+        const questionHeader = document.createElement('div');
+        questionHeader.className = 'question-header';
+        
+        const questionText = document.createElement('div');
+        questionText.className = 'question-text';
+        questionText.innerHTML = question.text;
+        
+        // Add critical flag if question is critical
+        if (question.critical) {
+          const criticalFlag = document.createElement('span');
+          criticalFlag.className = 'critical-flag';
+          criticalFlag.textContent = 'Critical';
+          questionText.appendChild(criticalFlag);
+        }
+        
+        const questionWeight = document.createElement('div');
+        questionWeight.className = 'question-weight';
+        questionWeight.textContent = `${question.weight} point${question.weight !== 1 ? 's' : ''}`;
+        
+        questionHeader.appendChild(questionText);
+        questionHeader.appendChild(questionWeight);
+        questionElement.appendChild(questionHeader);
+        
+        // Create score selector
+        const scoreSelector = document.createElement('div');
+        scoreSelector.className = 'score-selector';
+        
+        // Add score options
+        const scoreOptions = [
+          { value: question.weight, label: 'Yes', class: 'yes' },
+          { value: 0, label: 'No', class: 'no' },
+          { value: 'na', label: 'N/A', class: 'na' }
+        ];
+        
+        scoreOptions.forEach(option => {
+          const scoreOption = document.createElement('div');
+          scoreOption.className = `score-option ${option.class}`;
+          scoreOption.textContent = option.label;
+          scoreOption.dataset.value = option.value;
+          scoreOption.dataset.questionId = question.id;
+          scoreOption.dataset.section = question.section;
+          scoreOption.addEventListener('click', function() {
+            selectScore(this, question);
+          });
+          
+          scoreSelector.appendChild(scoreOption);
+        });
+        
+        questionElement.appendChild(scoreSelector);
+        
+        // Add comments field
+        const commentsDiv = document.createElement('div');
+        commentsDiv.className = 'question-comments';
+        
+        const commentsLabel = document.createElement('label');
+        commentsLabel.textContent = 'Comments:';
+        commentsLabel.setAttribute('for', `comments_${question.id}`);
+        
+        const commentsInput = document.createElement('textarea');
+        commentsInput.id = `comments_${question.id}`;
+        commentsInput.name = `comments_${question.id}`;
+        commentsInput.rows = 2;
+        commentsInput.placeholder = 'Add comments for this question (required for "No" answers)';
+        
+        commentsDiv.appendChild(commentsLabel);
+        commentsDiv.appendChild(commentsInput);
+        questionElement.appendChild(commentsDiv);
+        
+        return questionElement;
+      }
+      
+      function selectScore(element, question) {
+        // Get all options in this question group
+        const options = element.parentElement.querySelectorAll('.score-option');
+        options.forEach(opt => {
+          opt.classList.remove('selected');
+        });
+        
+        // Select this option
+        element.classList.add('selected');
+        
+        // Update score data
+        const value = element.dataset.value;
+        const section = element.dataset.section;
+        const questionId = element.dataset.questionId;
+        
+        // Find the previous score for this question (if any)
+        const previousScore = findQuestionScore(questionId);
+        
+        // Remove the previous score from the totals
+        if (previousScore !== null && previousScore !== 'na') {
+          scoringData.total -= previousScore;
+          scoringData.sections[section].total -= previousScore;
+        }
+        
+        // Add the new score
+        if (value !== 'na') {
+          const numValue = parseInt(value);
+          scoringData.total += numValue;
+          scoringData.sections[section].total += numValue;
+        }
+        
+        // Update the score display
+        updateScore();
+        
+        // If "No" is selected, highlight the comments field as required
+        const commentsField = document.querySelector(`#comments_${questionId}`);
+        if (value === '0') {
+          commentsField.classList.add('required');
+          commentsField.setAttribute('required', 'required');
+        } else {
+          commentsField.classList.remove('required');
+          commentsField.removeAttribute('required');
+        }
+      }
+      
+      function findQuestionScore(questionId) {
+        const questionElement = document.querySelector(`.question-item[data-question-id="${questionId}"]`);
+        const selectedOption = questionElement.querySelector('.score-option.selected');
+        
+        if (selectedOption) {
+          const value = selectedOption.dataset.value;
+          return value === 'na' ? 'na' : parseInt(value);
+        }
+        
+        return null;
+      }
+      
+      function updateScore() {
+        const currentScore = scoringData.total;
+        const maxScore = scoringData.possible;
+        const percentage = maxScore > 0 ? (currentScore / maxScore) * 100 : 0;
+        
+        document.getElementById('currentScore').textContent = currentScore;
+        document.getElementById('scorePercentage').textContent = formatPercentage(percentage);
+        document.getElementById('scoreProgressFill').style.width = percentage + '%';
+        
+        // Update color based on score
+        const progressFill = document.getElementById('scoreProgressFill');
+        if (percentage >= 90) {
+          progressFill.className = 'progress-fill green';
+        } else if (percentage >= 70) {
+          progressFill.className = 'progress-fill';
+        } else if (percentage >= 50) {
+          progressFill.className = 'progress-fill yellow';
+        } else {
+          progressFill.className = 'progress-fill red';
+        }
+      }
+      
+      function goToNextStep() {
+        if (currentStep < totalSteps) {
+          // Validate current step
+          if (currentStep === 1) {
+            if (!selectedAudit) {
+              showNotification('Please select an audit to evaluate', 'warning');
+              return;
+            }
+          } else if (currentStep === 2) {
+            if (!validateEvaluationForm()) {
+              return;
+            }
+            // Prepare summary data
+            prepareSummaryStep();
+          }
+          
+          // Hide current step
+          document.querySelector(`#step${currentStep}`).classList.remove('active');
+          document.querySelector(`#step${currentStep}Form`).classList.remove('active');
+          
+          // Show next step
+          currentStep++;
+          showCurrentStep();
+          
+          // Update navigation buttons
+          updateNavigationButtons();
+        }
+      }
+      
+      function goToPreviousStep() {
+        if (currentStep > 1) {
+          // Hide current step
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.remove('active');
+          
+          // Show previous step
+          currentStep--;
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.add('active');
+          
+          // Update navigation buttons
+          updateNavigationButtons();
+        }
+      }
+      
+      function showCurrentStep() {
+        // Hide all steps
+        const steps = document.querySelectorAll('.step');
+        steps.forEach(step => {
+          step.classList.remove('active');
+        });
+        
+        // Show the current step
+        if (currentStep === 1) {
+          document.getElementById('selectionFormStep').classList.add('active');
+        } else if (currentStep === 2) {
+          document.getElementById('evaluationFormStep').classList.add('active');
+        } else if (currentStep === 3) {
+          document.getElementById('summaryFormStep').classList.add('active');
+        }
+      }
+      
+      function updateNavigationButtons() {
+        // Update back button
+        const backBtn = document.getElementById('backBtn');
+        backBtn.style.display = currentStep > 1 ? 'inline-flex' : 'none';
+        
+        // Update next button
+        const nextBtn = document.getElementById('nextBtn');
+        nextBtn.style.display = currentStep < totalSteps - 1 ? 'inline-flex' : 'none';
+        
+        // Update submit button
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.style.display = currentStep === totalSteps ? 'inline-flex' : 'none';
+      }
+      
+      function validateEvaluationForm() {
+        // Check if all questions have been answered
+        const unansweredQuestions = [];
+        questions.forEach(question => {
+          const score = findQuestionScore(question.id);
+          if (score === null) {
+            unansweredQuestions.push(question);
+          }
+        });
+        
+        if (unansweredQuestions.length > 0) {
+          showNotification(`Please answer all questions (${unansweredQuestions.length} remaining)`, 'warning');
+          // Scroll to the first unanswered question
+          const firstUnanswered = document.querySelector(`.question-item[data-question-id="${unansweredQuestions[0].id}"]`);
+          firstUnanswered.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return false;
+        }
+        
+        // Check if comments are provided for "No" answers
+        const noAnswersWithoutComments = [];
+        questions.forEach(question => {
+          const score = findQuestionScore(question.id);
+          if (score === 0) {
+            const comments = document.getElementById(`comments_${question.id}`).value.trim();
+            if (comments === '') {
+              noAnswersWithoutComments.push(question);
+            }
+          }
+        });
+        
+        if (noAnswersWithoutComments.length > 0) {
+          showNotification(`Please provide comments for all "No" answers (${noAnswersWithoutComments.length} missing)`, 'warning');
+          // Scroll to the first one
+          const firstMissing = document.querySelector(`.question-item[data-question-id="${noAnswersWithoutComments[0].id}"]`);
+          firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return false;
+        }
+        
+        return true;
+      }
+      
+      function prepareSummaryStep() {
+        const currentScore = scoringData.total;
+        const maxScore = scoringData.possible;
+        const percentage = maxScore > 0 ? (currentScore / maxScore) * 100 : 0;
+        const passingThreshold = 80; // This should come from settings
+        
+        // Update the summary step with the evaluation details
+        document.getElementById('summaryAgentName').textContent = selectedAudit.Agent;
+        document.getElementById('summaryDate').textContent = formatDate(selectedAudit.Date);
+        document.getElementById('summaryScore').textContent = `${currentScore}/${maxScore} (${formatPercentage(percentage)})`;
+        
+        const resultElement = document.getElementById('summaryResult');
+        if (percentage >= passingThreshold) {
+          resultElement.textContent = 'PASS';
+          resultElement.className = 'status-badge status-completed';
+        } else {
+          resultElement.textContent = 'FAIL';
+          resultElement.className = 'status-badge status-failed';
+        }
+        
+        // Build the score breakdown
+        const scoreSummary = document.getElementById('scoreSummary');
+        scoreSummary.innerHTML = '';
+        
+        // Add a row for each section
+        Object.keys(scoringData.sections).forEach(section => {
+          const sectionData = scoringData.sections[section];
+          const sectionRow = document.createElement('div');
+          sectionRow.className = 'flex justify-between mb-8';
+          
+          const sectionLabel = document.createElement('div');
+          sectionLabel.textContent = section;
+          
+          const sectionScore = document.createElement('div');
+          const sectionPercentage = sectionData.possible > 0 
+            ? (sectionData.total / sectionData.possible) * 100 
+            : 0;
+          sectionScore.textContent = `${sectionData.total}/${sectionData.possible} (${formatPercentage(sectionPercentage)})`;
+          
+          sectionRow.appendChild(sectionLabel);
+          sectionRow.appendChild(sectionScore);
+          scoreSummary.appendChild(sectionRow);
+        });
+        
+        // Add a separator
+        const separator = document.createElement('hr');
+        scoreSummary.appendChild(separator);
+        
+        // Add the total row
+        const totalRow = document.createElement('div');
+        totalRow.className = 'flex justify-between font-bold';
+        
+        const totalLabel = document.createElement('div');
+        totalLabel.textContent = 'TOTAL';
+        
+        const totalScore = document.createElement('div');
+        totalScore.textContent = `${currentScore}/${maxScore} (${formatPercentage(percentage)})`;
+        
+        totalRow.appendChild(totalLabel);
+        totalRow.appendChild(totalScore);
+        scoreSummary.appendChild(totalRow);
+      }
+      
+      function submitEvaluation() {
+        showNotification('Submitting evaluation...', 'info');
+        
+        // Collect all the form data
+        const formData = {
+          auditId: document.getElementById('auditId').value,
+          questionSetId: document.getElementById('questionSetId').value,
+          overallComments: document.getElementById('overallComments').value,
+          strengths: document.getElementById('strengths').value,
+          improvements: document.getElementById('improvements').value,
+          notifyAgent: document.getElementById('notifyAgent').checked,
+          notifyManager: document.getElementById('notifyManager').checked,
+          score: scoringData.total,
+          maxPossible: scoringData.possible,
+          questions: []
+        };
+        
+        // Collect data for each question
+        questions.forEach(question => {
+          const score = findQuestionScore(question.id);
+          const comments = document.getElementById(`comments_${question.id}`).value;
+          
+          formData.questions.push({
+            id: question.id,
+            score: score === 'na' ? 'NA' : score,
+            comments: comments
+          });
+        });
+        
+        // Submit the data
+        google.script.run
+          .withSuccessHandler(onEvaluationSubmitted)
+          .withFailureHandler(handleError)
+          .submitEvaluation(formData);
+      }
+      
+      function onEvaluationSubmitted(result) {
+        if (result.success) {
+          showNotification('Evaluation submitted successfully', 'success');
+          
+          // Close the dialog after a short delay
+          setTimeout(function() {
+            closeDialog();
+          }, 1500);
+        } else {
+          showNotification('Error submitting evaluation: ' + result.message, 'error');
+        }
+      }
+      
+      function handleError(error) {
+        console.error('Error:', error);
+        showNotification('Error: ' + error.message, 'error');
+      }
+      
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
