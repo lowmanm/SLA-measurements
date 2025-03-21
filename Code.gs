@@ -1,144 +1,516 @@
 /**
- * QA Platform - Main Application Entry Point
- * This file contains the main menu setup and global configurations
+ * QA Platform - Main Code File
+ *
+ * This is the main entry point for the QA Platform application.
+ * It contains menu creation, global constants, and initialization.
  */
 
-// Global constants
+/**
+ * doGet function - Required entry point for web app deployment
+ * This function is called when the web app is accessed via a GET request
+ * 
+ * @param {Object} e - Event object containing request parameters
+ * @return {HtmlOutput} HTML content to display
+ */
+function doGet(e) {
+  return HtmlService.createHtmlOutputFromFile('index');
+}
+
+// Global Constants
 const SHEET_NAMES = {
-  AUDIT_QUEUE: 'auditQueue',
-  EVALUATIONS: 'evaluations',
-  QUESTIONS: 'questions',
-  USERS: 'users',
-  SETTINGS: 'settings',
-  DISPUTES: 'disputes',
-  TEMPLATES: 'evalTemplates'
+  USERS: 'Users',
+  QUESTION_SETS: 'Question Sets',
+  QUESTIONS: 'Questions',
+  AUDIT_QUEUE: 'Audit Queue',
+  EVALUATIONS: 'Evaluations',
+  EVALUATION_ANSWERS: 'Evaluation Answers',
+  DISPUTES: 'Disputes',
+  DISPUTE_RESOLUTIONS: 'Dispute Resolutions',
+  SETTINGS: 'Settings',
+  LOGS: 'Logs'
 };
 
+// User role constants
 const USER_ROLES = {
-  QA_ANALYST: 'QA Analyst',
-  AGENT_MANAGER: 'Agent Manager',
-  QA_MANAGER: 'QA Manager',
-  ADMIN: 'Admin'
+  AGENT: 'agent',
+  AGENT_MANAGER: 'agent_manager',
+  QA_ANALYST: 'qa_analyst',
+  QA_MANAGER: 'qa_manager',
+  ADMIN: 'admin'
 };
 
-// Global variables
-var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-var currentUser = Session.getActiveUser().getEmail();
+// Status constants
+const STATUS = {
+  PENDING: 'Pending',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  FAILED: 'Failed',
+  DISPUTED: 'Disputed',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  PARTIALLY_APPROVED: 'Partially Approved'
+};
 
 /**
  * Runs when the spreadsheet is opened
- * Sets up the main menu
+ * Creates the custom menu
  */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   
-  ui.createMenu('QA Platform')
-    .addItem('Show Main Panel', 'showMainSidebar')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('Evaluation')
-      .addItem('Start New Evaluation', 'showEvaluationForm')
-      .addItem('View My Evaluations', 'showMyEvaluations'))
-    .addSubMenu(ui.createMenu('Disputes')
-      .addItem('File Dispute', 'showDisputeForm')
-      .addItem('Review Disputes', 'showDisputeReview'))
-    .addSubMenu(ui.createMenu('Admin')
-      .addItem('Manage Questions', 'showQuestionManager')
+  // Create the main menu
+  const menu = ui.createMenu('QA Platform');
+  
+  // Add menu items
+  menu.addItem('Open QA Platform', 'showMainSidebar');
+  menu.addSeparator();
+  
+  // Get current user info
+  const userInfo = getUserInfo();
+  
+  // Add role-specific menu items
+  if (userInfo && userInfo.role) {
+    // QA Analyst specific menu items
+    if (hasPermission(USER_ROLES.QA_ANALYST) || hasPermission(USER_ROLES.QA_MANAGER) || hasPermission(USER_ROLES.ADMIN)) {
+      menu.addItem('New Evaluation', 'showEvaluationForm');
+    }
+    
+    // Agent Manager specific menu items
+    if (hasPermission(USER_ROLES.AGENT_MANAGER) || hasPermission(USER_ROLES.ADMIN)) {
+      menu.addItem('File Dispute', 'showDisputeForm');
+    }
+    
+    // QA Manager specific menu items
+    if (hasPermission(USER_ROLES.QA_MANAGER) || hasPermission(USER_ROLES.ADMIN)) {
+      menu.addItem('Review Disputes', 'showDisputeReview');
+    }
+    
+    // Common menu items for authenticated users
+    menu.addSeparator();
+    menu.addItem('Dashboard', 'showDashboard');
+  }
+  
+  // Admin specific menu items
+  if (hasPermission(USER_ROLES.ADMIN)) {
+    menu.addSeparator();
+    menu.addSubMenu(ui.createMenu('Admin')
+      .addItem('Manage Question Sets', 'showQuestionManager')
       .addItem('Manage Users', 'showUserManager')
-      .addItem('System Settings', 'showSettingsPanel'))
-    .addItem('Dashboard', 'showDashboard')
-    .addItem('Import Audit Queue', 'importFromGmail')
-    .addToUi();
+      .addItem('Settings', 'showSettingsPanel')
+      .addSeparator()
+      .addItem('Initialize Database', 'initializeDatabase')
+      .addItem('Import From Gmail', 'importFromGmail')
+      .addItem('Export Data', 'showExportPanel'));
+  }
+  
+  // Add help menu
+  menu.addSeparator();
+  menu.addItem('Help', 'showHelp');
+  menu.addItem('About', 'showAbout');
+  
+  // Add the menu to the UI
+  menu.addToUi();
 }
 
 /**
- * Shows the main sidebar with appropriate options based on user role
+ * Show the main sidebar
  */
 function showMainSidebar() {
-  const userRole = getUserRole(currentUser);
+  // Check if database is initialized
+  const isInitialized = isDatabaseInitialized();
+  
+  // If not initialized and user is admin, show initialization dialog
+  if (!isInitialized && hasPermission(USER_ROLES.ADMIN)) {
+    showInitializationDialog();
+    return;
+  } else if (!isInitialized) {
+    // If not initialized and user is not admin, show message
+    SpreadsheetApp.getUi().alert(
+      'QA Platform Not Initialized', 
+      'The QA Platform has not been initialized. Please contact the system administrator.', 
+      SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  
+  // Get the sidebar content
   const html = HtmlService.createTemplateFromFile('UI/MainSidebar')
     .evaluate()
     .setTitle('QA Platform')
     .setWidth(300);
   
+  // Show the sidebar
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
 /**
- * Includes HTML files for modular code organization
+ * Show the evaluation form
+ */
+function showEvaluationForm() {
+  // Check permissions
+  if (!hasPermission(USER_ROLES.QA_ANALYST) && 
+      !hasPermission(USER_ROLES.QA_MANAGER) && 
+      !hasPermission(USER_ROLES.ADMIN)) {
+    SpreadsheetApp.getUi().alert('You do not have permission to perform evaluations.');
+    return;
+  }
+  
+  // Create and show the dialog
+  const html = HtmlService.createTemplateFromFile('UI/EvaluationForm')
+    .evaluate()
+    .setWidth(800)
+    .setHeight(600)
+    .setTitle('QA Evaluation');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'QA Evaluation');
+}
+
+/**
+ * Show the dispute form
+ */
+function showDisputeForm() {
+  // Check permissions
+  if (!hasPermission(USER_ROLES.AGENT_MANAGER) && !hasPermission(USER_ROLES.ADMIN)) {
+    SpreadsheetApp.getUi().alert('You do not have permission to file disputes.');
+    return;
+  }
+  
+  // Create and show the dialog
+  const html = HtmlService.createTemplateFromFile('UI/DisputeForm')
+    .evaluate()
+    .setWidth(800)
+    .setHeight(600)
+    .setTitle('File Dispute');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'File Dispute');
+}
+
+/**
+ * Show the dispute review interface
+ */
+function showDisputeReview() {
+  // Check permissions
+  if (!hasPermission(USER_ROLES.QA_MANAGER) && !hasPermission(USER_ROLES.ADMIN)) {
+    SpreadsheetApp.getUi().alert('You do not have permission to review disputes.');
+    return;
+  }
+  
+  // Create and show the dialog
+  const html = HtmlService.createTemplateFromFile('UI/DisputeReview')
+    .evaluate()
+    .setWidth(800)
+    .setHeight(600)
+    .setTitle('Dispute Review');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'Dispute Review');
+}
+
+/**
+ * Show the dashboard
+ */
+function showDashboard() {
+  // Create and show the dialog
+  const html = HtmlService.createTemplateFromFile('UI/Dashboard')
+    .evaluate()
+    .setWidth(800)
+    .setHeight(600)
+    .setTitle('QA Dashboard');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'QA Dashboard');
+}
+
+/**
+ * Show the question set manager
+ */
+function showQuestionManager() {
+  // Check permissions
+  if (!hasPermission(USER_ROLES.ADMIN)) {
+    SpreadsheetApp.getUi().alert('You do not have permission to manage question sets.');
+    return;
+  }
+  
+  // Create and show the dialog
+  const html = HtmlService.createTemplateFromFile('UI/AdminPanel')
+    .evaluate()
+    .setWidth(800)
+    .setHeight(600)
+    .setTitle('Question Set Manager');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'Question Set Manager');
+}
+
+/**
+ * Show the user manager
+ */
+function showUserManager() {
+  // Check permissions
+  if (!hasPermission(USER_ROLES.ADMIN)) {
+    SpreadsheetApp.getUi().alert('You do not have permission to manage users.');
+    return;
+  }
+  
+  // Create and show the dialog
+  const html = HtmlService.createTemplateFromFile('UI/UserManagement')
+    .evaluate()
+    .setWidth(800)
+    .setHeight(600)
+    .setTitle('User Management');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'User Management');
+}
+
+/**
+ * Show the settings panel
+ */
+function showSettingsPanel() {
+  // Check permissions
+  if (!hasPermission(USER_ROLES.ADMIN)) {
+    SpreadsheetApp.getUi().alert('You do not have permission to modify settings.');
+    return;
+  }
+  
+  // Create and show the dialog
+  const html = HtmlService.createTemplateFromFile('UI/AdminPanel')
+    .evaluate()
+    .setWidth(800)
+    .setHeight(600)
+    .setTitle('Settings');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'Settings');
+}
+
+/**
+ * Show the export panel
+ */
+function showExportPanel() {
+  // Check permissions
+  if (!hasPermission(USER_ROLES.QA_MANAGER) && !hasPermission(USER_ROLES.ADMIN)) {
+    SpreadsheetApp.getUi().alert('You do not have permission to export data.');
+    return;
+  }
+  
+  // Create and show the dialog
+  const html = HtmlService.createHtmlOutput('<p>Export functionality would be implemented here.</p>')
+    .setWidth(400)
+    .setHeight(300)
+    .setTitle('Export Data');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'Export Data');
+}
+
+/**
+ * Show the help dialog
+ */
+function showHelp() {
+  // Create and show the dialog
+  const html = HtmlService.createHtmlOutput(`
+    <h2>QA Platform Help</h2>
+    <p>The QA Platform helps you evaluate agent performance and manage quality assurance processes.</p>
+    <h3>Key Features</h3>
+    <ul>
+      <li>Conduct evaluations with customizable question sets</li>
+      <li>File and review disputes for evaluations</li>
+      <li>Generate performance reports and metrics</li>
+      <li>Import and export data</li>
+    </ul>
+    <p>For more information, please contact the system administrator.</p>
+  `)
+    .setWidth(400)
+    .setHeight(300)
+    .setTitle('Help');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'Help');
+}
+
+/**
+ * Show the about dialog
+ */
+function showAbout() {
+  // Get the version from settings
+  const settings = getSettings();
+  const version = settings.version || '1.0.0';
+  
+  // Create and show the dialog
+  const html = HtmlService.createHtmlOutput(`
+    <div style="text-align: center; padding: 20px;">
+      <h2>QA Platform</h2>
+      <p>Version ${version}</p>
+      <p>A quality assurance platform for evaluating agent performance.</p>
+      <p>&copy; 2025 All rights reserved.</p>
+    </div>
+  `)
+    .setWidth(300)
+    .setHeight(200)
+    .setTitle('About QA Platform');
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'About');
+}
+
+/**
+ * Show the initialization dialog
+ */
+function showInitializationDialog() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Show dialog
+  const response = ui.alert(
+    'Initialize QA Platform', 
+    'The QA Platform needs to be initialized. This will create all required sheets and initial data. Do you want to proceed?', 
+    ui.ButtonSet.YES_NO);
+  
+  // Process response
+  if (response === ui.Button.YES) {
+    initializeDatabase();
+  }
+}
+
+/**
+ * Include HTML file
+ * Used by HTML templates to include other HTML files
+ * 
+ * @param {string} filename - The name of the file to include
+ * @return {string} The contents of the file
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /**
- * Initialization function to set up the spreadsheet structure
- * This can be run manually to create all necessary sheets
+ * Get user info for the current user
+ * 
+ * @return {Object} User info object
  */
-function initializeSystem() {
-  // Create all required sheets if they don't exist
-  createSheetIfNotExists(SHEET_NAMES.AUDIT_QUEUE, [
-    'ID', 'Date', 'Agent', 'Customer', 'Interaction Type', 'Duration', 
-    'Queue Status', 'Assigned To', 'Priority', 'Import Date'
-  ]);
-  
-  createSheetIfNotExists(SHEET_NAMES.EVALUATIONS, [
-    'ID', 'Audit ID', 'Evaluation Date', 'Evaluator', 'Agent', 'Score', 
-    'Max Possible', 'Status', 'Disputed', 'Last Updated'
-  ]);
-  
-  createSheetIfNotExists(SHEET_NAMES.QUESTIONS, [
-    'ID', 'Template ID', 'Question', 'Category', 'Weight', 'Critical', 'Active'
-  ]);
-  
-  createSheetIfNotExists(SHEET_NAMES.USERS, [
-    'Email', 'Name', 'Role', 'Active', 'Last Login', 'Department'
-  ]);
-  
-  createSheetIfNotExists(SHEET_NAMES.SETTINGS, [
-    'Setting', 'Value', 'Description'
-  ]);
-  
-  createSheetIfNotExists(SHEET_NAMES.DISPUTES, [
-    'ID', 'Evaluation ID', 'Date Filed', 'Filed By', 'Status', 'Reviewer', 
-    'Resolution Date', 'Resolution Notes', 'Original Score', 'Adjusted Score'
-  ]);
-  
-  createSheetIfNotExists(SHEET_NAMES.TEMPLATES, [
-    'ID', 'Name', 'Description', 'Interaction Type', 'Active', 'Created By', 'Creation Date'
-  ]);
-  
-  // Add default settings
-  const settingsSheet = spreadsheet.getSheetByName(SHEET_NAMES.SETTINGS);
-  if (settingsSheet.getLastRow() <= 1) {
-    settingsSheet.appendRow(['notification_email_enabled', 'true', 'Enable email notifications']);
-    settingsSheet.appendRow(['dispute_window_days', '7', 'Number of days allowed for filing disputes']);
-    settingsSheet.appendRow(['min_evaluations_per_agent', '4', 'Minimum evaluations per agent per month']);
-    settingsSheet.appendRow(['passing_score_percentage', '80', 'Minimum passing score percentage']);
-  }
-  
-  // Add the current user as admin if users sheet is empty
-  const usersSheet = spreadsheet.getSheetByName(SHEET_NAMES.USERS);
-  if (usersSheet.getLastRow() <= 1) {
-    usersSheet.appendRow([currentUser, 'System Admin', USER_ROLES.ADMIN, 'TRUE', new Date(), 'Administration']);
+function getUserInfo() {
+  try {
+    // Get the current user's email
+    const email = Session.getActiveUser().getEmail();
+    
+    // Check if the Users sheet exists
+    if (!sheetExists(SHEET_NAMES.USERS)) {
+      return {
+        email: email,
+        role: isSystemAdmin(email) ? USER_ROLES.ADMIN : null,
+        isInitialized: false
+      };
+    }
+    
+    // Look up the user in the database
+    const users = getDataFromSheet(SHEET_NAMES.USERS);
+    const user = users.find(u => u.Email === email);
+    
+    // If user found, return their info
+    if (user) {
+      return {
+        email: email,
+        role: user.Role,
+        name: user.Name,
+        department: user.Department,
+        manager: user.Manager,
+        isInitialized: true
+      };
+    }
+    
+    // If sheet exists but user not found, check if they are a system admin
+    if (isSystemAdmin(email)) {
+      return {
+        email: email,
+        role: USER_ROLES.ADMIN,
+        isInitialized: true
+      };
+    }
+    
+    // User not found and not admin
+    return {
+      email: email,
+      role: null,
+      isInitialized: true
+    };
+  } catch (error) {
+    Logger.log(`Error in getUserInfo: ${error.message}`);
+    return {
+      email: Session.getActiveUser().getEmail(),
+      role: null,
+      error: error.message,
+      isInitialized: false
+    };
   }
 }
 
 /**
- * Helper function to create a sheet if it doesn't exist
+ * Check if a user has a specific permission based on their role
+ * 
+ * @param {string} requiredRole - The role required for the permission
+ * @return {boolean} True if the user has the required permission
  */
-function createSheetIfNotExists(sheetName, headers) {
-  let sheet = spreadsheet.getSheetByName(sheetName);
+function hasPermission(requiredRole) {
+  const userInfo = getUserInfo();
   
-  if (!sheet) {
-    sheet = spreadsheet.insertSheet(sheetName);
-    sheet.appendRow(headers);
-    
-    // Format the header row
-    sheet.getRange(1, 1, 1, headers.length)
-      .setBackground('#4285F4')
-      .setFontColor('white')
-      .setFontWeight('bold');
+  // If user info couldn't be retrieved, deny permission
+  if (!userInfo || !userInfo.role) {
+    return false;
   }
   
-  return sheet;
+  // Admin has all permissions
+  if (userInfo.role === USER_ROLES.ADMIN) {
+    return true;
+  }
+  
+  // QA Manager has QA Analyst permissions
+  if (requiredRole === USER_ROLES.QA_ANALYST && userInfo.role === USER_ROLES.QA_MANAGER) {
+    return true;
+  }
+  
+  // Exact role match
+  return userInfo.role === requiredRole;
+}
+
+/**
+ * Check if a user is a system administrator
+ * 
+ * @param {string} email - The email to check
+ * @return {boolean} True if the user is a system administrator
+ */
+function isSystemAdmin(email) {
+  // In a real implementation, this might check against a configured list of admins
+  // For simplicity, we'll consider the sheet owner as admin
+  const owner = SpreadsheetApp.getActiveSpreadsheet().getOwner().getEmail();
+  return email === owner;
+}
+
+/**
+ * Check if the database has been initialized
+ * 
+ * @return {boolean} True if the database has been initialized
+ */
+function isDatabaseInitialized() {
+  // Check if all required sheets exist
+  for (const sheetName in SHEET_NAMES) {
+    if (!sheetExists(SHEET_NAMES[sheetName])) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Check if a sheet exists in the spreadsheet
+ * 
+ * @param {string} name - The name of the sheet to check
+ * @return {boolean} True if the sheet exists
+ */
+function sheetExists(name) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadsheet.getSheetByName(name);
+  return sheet !== null;
+}
+
+/**
+ * Generate a unique ID
+ * 
+ * @return {string} A unique ID
+ */
+function generateUniqueId() {
+  const timestamp = new Date().getTime().toString();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `${timestamp}_${random}`;
 }
