@@ -1,0 +1,352 @@
+<script>
+  /**
+   * Utility functions for the QA Platform UI
+   */
+  
+  // Show a notification message
+  function showNotification(message, type = 'default') {
+    // Remove any existing notification
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    // Add icon based on type
+    let icon = 'info';
+    switch (type) {
+      case 'success':
+        icon = 'check_circle';
+        break;
+      case 'error':
+        icon = 'error';
+        break;
+      case 'warning':
+        icon = 'warning';
+        break;
+      case 'info':
+        icon = 'info';
+        break;
+    }
+    
+    notification.innerHTML = `
+      <i class="material-icons">${icon}</i>
+      <span>${message}</span>
+    `;
+    
+    // Add to the document
+    document.body.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => {
+      notification.classList.add('visible');
+    }, 10);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      notification.classList.remove('visible');
+      setTimeout(() => {
+        notification.remove();
+      }, 300);
+    }, 5000);
+  }
+  
+  // Format a date nicely
+  function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+  
+  // Format a date with time
+  function formatDateTime(dateString) {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+  
+  // Format a percentage
+  function formatPercentage(value) {
+    if (value === undefined || value === null) return 'N/A';
+    
+    const num = parseFloat(value);
+    if (isNaN(num)) return value;
+    
+    return `${num.toFixed(1)}%`;
+  }
+  
+  // Format a score as "X/Y (Z%)"
+  function formatScore(score, maxPossible) {
+    if (score === undefined || maxPossible === undefined) return 'N/A';
+    
+    const numScore = parseFloat(score);
+    const numMax = parseFloat(maxPossible);
+    
+    if (isNaN(numScore) || isNaN(numMax) || numMax === 0) return `${score}/${maxPossible}`;
+    
+    const percentage = (numScore / numMax) * 100;
+    return `${numScore}/${numMax} (${percentage.toFixed(1)}%)`;
+  }
+  
+  // Create an avatar with initials
+  function createInitialsAvatar(name) {
+    if (!name) return 'NA';
+    
+    const parts = name.split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    } else {
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+  }
+  
+  // Setup tab navigation
+  function setupTabs() {
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Get the target content ID
+        const target = tab.getAttribute('data-target');
+        
+        // Remove active class from all tabs and contents
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        // Add active class to the clicked tab and its content
+        tab.classList.add('active');
+        document.getElementById(target).classList.add('active');
+      });
+    });
+  }
+  
+  // Setup a table with sorting capability
+  function setupSortableTable(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const headers = table.querySelectorAll('th[data-sortable]');
+    
+    headers.forEach(header => {
+      header.addEventListener('click', () => {
+        const column = header.getAttribute('data-column');
+        const type = header.getAttribute('data-type') || 'string';
+        const currentIsAsc = header.classList.contains('sort-asc');
+        
+        // Remove sort classes from all headers
+        headers.forEach(h => {
+          h.classList.remove('sort-asc', 'sort-desc');
+        });
+        
+        // Add sort class to the clicked header
+        header.classList.add(currentIsAsc ? 'sort-desc' : 'sort-asc');
+        
+        // Get rows to sort (skip the header row)
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        // Sort the rows
+        const sortedRows = sortRows(rows, column, type, !currentIsAsc);
+        
+        // Remove all rows
+        rows.forEach(row => {
+          tbody.removeChild(row);
+        });
+        
+        // Add sorted rows
+        sortedRows.forEach(row => {
+          tbody.appendChild(row);
+        });
+      });
+    });
+  }
+  
+  // Sort rows helper
+  function sortRows(rows, column, type, ascending) {
+    return rows.sort((a, b) => {
+      const aValue = getCellValue(a, column);
+      const bValue = getCellValue(b, column);
+      
+      let comparison = 0;
+      
+      switch (type) {
+        case 'number':
+          comparison = parseFloat(aValue) - parseFloat(bValue);
+          break;
+        case 'date':
+          comparison = new Date(aValue) - new Date(bValue);
+          break;
+        default:
+          comparison = aValue.localeCompare(bValue);
+      }
+      
+      return ascending ? comparison : -comparison;
+    });
+  }
+  
+  // Get cell value helper
+  function getCellValue(row, column) {
+    const cell = row.querySelector(`td[data-column="${column}"]`);
+    return cell ? cell.textContent.trim() : '';
+  }
+  
+  // Setup filter input for a table
+  function setupTableFilter(inputId, tableId, columns) {
+    const input = document.getElementById(inputId);
+    const table = document.getElementById(tableId);
+    
+    if (!input || !table) return;
+    
+    input.addEventListener('keyup', () => {
+      const filterValue = input.value.toLowerCase();
+      const rows = table.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+        let shouldShow = false;
+        
+        columns.forEach(column => {
+          const cell = row.querySelector(`td[data-column="${column}"]`);
+          if (cell && cell.textContent.toLowerCase().includes(filterValue)) {
+            shouldShow = true;
+          }
+        });
+        
+        row.style.display = shouldShow ? '' : 'none';
+      });
+    });
+  }
+  
+  // Set up date range inputs
+  function setupDateRange(startInputId, endInputId, defaultDays = 30) {
+    const startInput = document.getElementById(startInputId);
+    const endInput = document.getElementById(endInputId);
+    
+    if (!startInput || !endInput) return;
+    
+    // Set default values
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - defaultDays);
+    
+    // Format dates for input fields (YYYY-MM-DD)
+    endInput.value = formatDateForInput(endDate);
+    startInput.value = formatDateForInput(startDate);
+    
+    // Set max dates
+    startInput.max = endInput.value;
+    endInput.max = formatDateForInput(new Date());
+    
+    // Add event listeners
+    startInput.addEventListener('change', () => {
+      if (new Date(startInput.value) > new Date(endInput.value)) {
+        endInput.value = startInput.value;
+      }
+    });
+    
+    endInput.addEventListener('change', () => {
+      if (new Date(endInput.value) < new Date(startInput.value)) {
+        startInput.value = endInput.value;
+      }
+    });
+  }
+  
+  // Format date for input field
+  function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Create a status badge
+  function createStatusBadge(status) {
+    let className = 'status-badge';
+    
+    switch (status.toLowerCase()) {
+      case 'pending':
+        className += ' status-pending';
+        break;
+      case 'completed':
+        className += ' status-completed';
+        break;
+      case 'failed':
+        className += ' status-failed';
+        break;
+      case 'disputed':
+        className += ' status-disputed';
+        break;
+      // Add more status types as needed
+    }
+    
+    return `<span class="${className}">${status}</span>`;
+  }
+  
+  // Load data with a loading indicator
+  function loadDataWithSpinner(elementId, loadingMessage, dataLoadFn) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    // Show loading indicator
+    element.innerHTML = `
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>${loadingMessage || 'Loading...'}</p>
+      </div>
+    `;
+    
+    // Load the data
+    return dataLoadFn()
+      .catch(error => {
+        element.innerHTML = `
+          <div class="error-message">
+            <i class="material-icons">error</i>
+            <p>${error.message || 'An error occurred while loading data.'}</p>
+          </div>
+        `;
+        throw error;
+      });
+  }
+  
+  // Generate a color based on a string (for consistent colors for the same values)
+  function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    const colors = [
+      '#4285F4', // Blue
+      '#0F9D58', // Green
+      '#F4B400', // Yellow
+      '#DB4437', // Red
+      '#4A148C', // Purple
+      '#0097A7', // Teal
+      '#FFA000', // Amber
+      '#C2185B', // Pink
+      '#689F38', // Light Green
+      '#FF5722'  // Deep Orange
+    ];
+    
+    return colors[Math.abs(hash) % colors.length];
+  }
+</script>
