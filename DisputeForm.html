@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('UI/styles'); ?>
+  </head>
+  <body>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>File Dispute</h2>
+        <button id="closeBtn" class="secondary">
+          <i class="material-icons">close</i> Close
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Evaluation Selection (Step 1) -->
+        <div id="selectionStep" class="step active">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Select Evaluation to Dispute</h3>
+            </div>
+            
+            <div class="mb-16">
+              <label for="evaluationsFilter">Filter:</label>
+              <input type="text" id="evaluationsFilter" placeholder="Search by agent, date, or evaluator...">
+            </div>
+            
+            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+              <table id="evaluationsTable">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Evaluator</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="evaluationsTableBody">
+                  <tr>
+                    <td colspan="5" class="text-center">Loading evaluations...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Dispute Form (Step 2) -->
+        <div id="disputeFormStep" class="step">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Dispute Details</h3>
+            </div>
+            
+            <div id="evaluationSummary" class="mb-16">
+              <div class="flex justify-between mb-8">
+                <strong>Agent:</strong>
+                <span id="agentName"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Evaluation Date:</strong>
+                <span id="evaluationDate"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Evaluator:</strong>
+                <span id="evaluatorName"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Original Score:</strong>
+                <span id="originalScore"></span>
+              </div>
+            </div>
+            
+            <form id="disputeForm">
+              <input type="hidden" id="evaluationId" name="evaluationId">
+              
+              <div class="mb-16">
+                <label for="disputeReason">Reason for Dispute:</label>
+                <select id="disputeReason" name="disputeReason" required>
+                  <option value="" disabled selected>-- Select reason --</option>
+                  <option value="Incorrect Assessment">Incorrect Assessment</option>
+                  <option value="Missing Context">Missing Context</option>
+                  <option value="Process Not Followed">Process Not Followed</option>
+                  <option value="Technical Issue">Technical Issue</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              
+              <div class="mb-16">
+                <label for="disputeDetails">Dispute Details:</label>
+                <textarea id="disputeDetails" name="disputeDetails" rows="5" placeholder="Please provide specific details about why you're disputing this evaluation..." required></textarea>
+              </div>
+              
+              <div class="mb-16">
+                <label for="questionId">Disputed Question(s):</label>
+                <select id="questionId" name="questionId" multiple style="height: 150px;" required>
+                  <option value="all">All Questions (dispute entire evaluation)</option>
+                  <!-- Questions will be populated dynamically -->
+                </select>
+                <p class="helper-text">Hold Ctrl/Cmd to select multiple questions</p>
+              </div>
+              
+              <div class="mb-16">
+                <label for="requestedScore">Requested Score Change (optional):</label>
+                <input type="text" id="requestedScore" name="requestedScore" placeholder="e.g., 'Question 3 should be Yes instead of No'">
+              </div>
+              
+              <div class="mb-16">
+                <label for="additionalEvidence">Additional Evidence:</label>
+                <textarea id="additionalEvidence" name="additionalEvidence" rows="3" placeholder="Provide any additional evidence or documentation that supports your dispute..."></textarea>
+              </div>
+              
+              <div class="mb-16">
+                <div class="flex items-center gap-8">
+                  <input type="checkbox" id="acknowledgment" name="acknowledgment" required>
+                  <label for="acknowledgment" style="margin-bottom: 0;">I acknowledge that this dispute will be reviewed by a QA Manager and that I may be contacted for additional information.</label>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Confirmation (Step 3) -->
+        <div id="confirmationStep" class="step">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Dispute Submitted</h3>
+            </div>
+            
+            <div class="text-center mb-16">
+              <i class="material-icons" style="font-size: 48px; color: #4285F4; margin: 24px 0;">check_circle</i>
+              <h3>Your dispute has been submitted successfully!</h3>
+              <p>Dispute ID: <span id="disputeId"></span></p>
+              <p>The QA Manager will review your dispute and you will be notified of the outcome.</p>
+            </div>
+            
+            <div class="card bg-light">
+              <h4>Next Steps</h4>
+              <ol>
+                <li>Your dispute will be assigned to a QA Manager for review</li>
+                <li>You may be contacted for additional information</li>
+                <li>You will receive an email notification when the dispute is resolved</li>
+                <li>If the dispute is upheld, the evaluation score will be adjusted accordingly</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button id="backBtn" class="secondary" style="display: none;">
+          <i class="material-icons">arrow_back</i> Back
+        </button>
+        <button id="nextBtn" class="primary" style="display: none;">
+          <i class="material-icons">arrow_forward</i> Next
+        </button>
+        <button id="submitBtn" class="primary" style="display: none;">
+          <i class="material-icons">gavel</i> Submit Dispute
+        </button>
+        <button id="doneBtn" class="primary" style="display: none;">
+          <i class="material-icons">check</i> Done
+        </button>
+        <button id="cancelBtn" class="secondary">Cancel</button>
+      </div>
+    </div>
+    
+    <?!= include('UI/scripts'); ?>
+    <script>
+      // Variables to store the current state
+      let currentStep = 1;
+      let totalSteps = 3;
+      let selectedEvaluation = null;
+      let evaluations = [];
+      
+      // Initialize the form when the page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        // Set up event listeners
+        document.getElementById('closeBtn').addEventListener('click', closeDialog);
+        document.getElementById('cancelBtn').addEventListener('click', closeDialog);
+        document.getElementById('backBtn').addEventListener('click', goToPreviousStep);
+        document.getElementById('nextBtn').addEventListener('click', goToNextStep);
+        document.getElementById('submitBtn').addEventListener('click', submitDispute);
+        document.getElementById('doneBtn').addEventListener('click', closeDialog);
+        document.getElementById('evaluationsFilter').addEventListener('keyup', filterEvaluations);
+        
+        // Load evaluations
+        loadEvaluations();
+        
+        // Set up the initial UI state
+        updateNavigationButtons();
+      });
+      
+      function loadEvaluations() {
+        showNotification('Loading evaluations...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(populateEvaluationsTable)
+          .withFailureHandler(handleError)
+          .getEvaluationsForDispute();
+      }
+      
+      function populateEvaluationsTable(data) {
+        evaluations = data;
+        
+        if (!evaluations || evaluations.length === 0) {
+          document.getElementById('evaluationsTableBody').innerHTML = 
+            '<tr><td colspan="5" class="text-center">No evaluations available for dispute</td></tr>';
+          return;
+        }
+        
+        renderEvaluationsTable(evaluations);
+        
+        // Set up click handlers after rendering the table
+        setupViewButtons();
+      }
+      
+      function renderEvaluationsTable(evaluations) {
+        const tableBody = document.getElementById('evaluationsTableBody');
+        tableBody.innerHTML = '';
+        
+        evaluations.forEach(evaluation => {
+          const row = document.createElement('tr');
+          
+          // Agent column
+          const agentCell = document.createElement('td');
+          agentCell.textContent = evaluation.Agent;
+          row.appendChild(agentCell);
+          
+          // Date column
+          const dateCell = document.createElement('td');
+          dateCell.textContent = formatDate(evaluation['Evaluation Date']);
+          row.appendChild(dateCell);
+          
+          // Score column
+          const scoreCell = document.createElement('td');
+          const score = parseInt(evaluation.Score);
+          const maxPossible = parseInt(evaluation['Max Possible']);
+          const scorePercentage = (score / maxPossible) * 100;
+          scoreCell.textContent = `${score}/${maxPossible} (${scorePercentage.toFixed(1)}%)`;
+          row.appendChild(scoreCell);
+          
+          // Evaluator column
+          const evaluatorCell = document.createElement('td');
+          evaluatorCell.textContent = evaluation.Evaluator;
+          row.appendChild(evaluatorCell);
+          
+          // Actions column
+          const actionsCell = document.createElement('td');
+          const viewBtn = document.createElement('button');
+          viewBtn.className = 'primary btn-sm';
+          viewBtn.innerHTML = '<i class="material-icons">visibility</i> View';
+          viewBtn.dataset.id = evaluation.ID;
+          actionsCell.appendChild(viewBtn);
+          row.appendChild(actionsCell);
+          
+          tableBody.appendChild(row);
+        });
+      }
+      
+      function setupViewButtons() {
+        document.querySelectorAll('button[data-id]').forEach(button => {
+          button.addEventListener('click', function() {
+            const id = this.dataset.id;
+            selectEvaluation(id);
+          });
+        });
+      }
+      
+      function filterEvaluations() {
+        const filterText = document.getElementById('evaluationsFilter').value.toLowerCase();
+        
+        // If the filter is empty, show all evaluations
+        if (!filterText) {
+          renderEvaluationsTable(evaluations);
+          setupViewButtons();
+          return;
+        }
+        
+        // Filter evaluations based on the search text
+        const filteredEvaluations = evaluations.filter(evaluation => {
+          return evaluation.Agent.toLowerCase().includes(filterText) ||
+                 evaluation.Evaluator.toLowerCase().includes(filterText) ||
+                 formatDate(evaluation['Evaluation Date']).toLowerCase().includes(filterText);
+        });
+        
+        renderEvaluationsTable(filteredEvaluations);
+        setupViewButtons();
+      }
+      
+      function selectEvaluation(id) {
+        selectedEvaluation = evaluations.find(e => e.ID === id);
+        
+        if (!selectedEvaluation) {
+          showNotification('Error: Evaluation not found', 'error');
+          return;
+        }
+        
+        // Populate the dispute form with evaluation details
+        document.getElementById('evaluationId').value = selectedEvaluation.ID;
+        document.getElementById('agentName').textContent = selectedEvaluation.Agent;
+        document.getElementById('evaluationDate').textContent = formatDate(selectedEvaluation['Evaluation Date']);
+        document.getElementById('evaluatorName').textContent = selectedEvaluation.Evaluator;
+        
+        const score = parseInt(selectedEvaluation.Score);
+        const maxPossible = parseInt(selectedEvaluation['Max Possible']);
+        const scorePercentage = (score / maxPossible) * 100;
+        document.getElementById('originalScore').textContent = 
+          `${score}/${maxPossible} (${scorePercentage.toFixed(1)}%)`;
+        
+        // Load the evaluation questions
+        loadEvaluationQuestions(selectedEvaluation.ID);
+        
+        // Go to the next step
+        goToNextStep();
+      }
+      
+      function loadEvaluationQuestions(evaluationId) {
+        google.script.run
+          .withSuccessHandler(populateQuestionDropdown)
+          .withFailureHandler(handleError)
+          .getEvaluationQuestions(evaluationId);
+      }
+      
+      function populateQuestionDropdown(questions) {
+        const dropdown = document.getElementById('questionId');
+        
+        // Keep the "All Questions" option and clear the rest
+        dropdown.innerHTML = '<option value="all">All Questions (dispute entire evaluation)</option>';
+        
+        // Add options for each question
+        questions.forEach((question, index) => {
+          const option = document.createElement('option');
+          option.value = question.id;
+          
+          // Format the option text
+          const score = question.score === 'NA' ? 'N/A' : question.score;
+          option.textContent = `Q${index + 1}: ${question.text.substring(0, 50)}${question.text.length > 50 ? '...' : ''} - Scored: ${score}`;
+          
+          dropdown.appendChild(option);
+        });
+      }
+      
+      function goToNextStep() {
+        if (currentStep < totalSteps) {
+          // Validate current step before proceeding
+          if (currentStep === 1 && !selectedEvaluation) {
+            showNotification('Please select an evaluation to dispute', 'warning');
+            return;
+          }
+          
+          if (currentStep === 2 && !validateDisputeForm()) {
+            return;
+          }
+          
+          // Hide current step
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.remove('active');
+          
+          // Show next step
+          currentStep++;
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.add('active');
+          
+          // Update navigation buttons
+          updateNavigationButtons();
+        }
+      }
+      
+      function goToPreviousStep() {
+        if (currentStep > 1) {
+          // Hide current step
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.remove('active');
+          
+          // Show previous step
+          currentStep--;
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.add('active');
+          
+          // Update navigation buttons
+          updateNavigationButtons();
+        }
+      }
+      
+      function updateNavigationButtons() {
+        // Update back button
+        const backBtn = document.getElementById('backBtn');
+        backBtn.style.display = currentStep > 1 && currentStep < totalSteps ? 'inline-flex' : 'none';
+        
+        // Update next button
+        const nextBtn = document.getElementById('nextBtn');
+        nextBtn.style.display = currentStep === 1 ? 'none' : 'none'; // Not using Next in this form
+        
+        // Update submit button
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.style.display = currentStep === 2 ? 'inline-flex' : 'none';
+        
+        // Update done button
+        const doneBtn = document.getElementById('doneBtn');
+        doneBtn.style.display = currentStep === 3 ? 'inline-flex' : 'none';
+        
+        // Update cancel button
+        const cancelBtn = document.getElementById('cancelBtn');
+        cancelBtn.style.display = currentStep === 3 ? 'none' : 'inline-flex';
+      }
+      
+      function validateDisputeForm() {
+        const form = document.getElementById('disputeForm');
+        
+        // Check if form is valid
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return false;
+        }
+        
+        // Additional validation for multiple select
+        const questionSelect = document.getElementById('questionId');
+        if (questionSelect.selectedOptions.length === 0) {
+          showNotification('Please select at least one question to dispute', 'warning');
+          return false;
+        }
+        
+        return true;
+      }
+      
+      function submitDispute() {
+        if (!validateDisputeForm()) return;
+        
+        showNotification('Submitting dispute...', 'info');
+        
+        // Collect form data
+        const formData = {
+          evaluationId: document.getElementById('evaluationId').value,
+          reason: document.getElementById('disputeReason').value,
+          details: document.getElementById('disputeDetails').value,
+          questionIds: Array.from(document.getElementById('questionId').selectedOptions).map(opt => opt.value),
+          requestedScore: document.getElementById('requestedScore').value,
+          additionalEvidence: document.getElementById('additionalEvidence').value
+        };
+        
+        google.script.run
+          .withSuccessHandler(onDisputeSubmitted)
+          .withFailureHandler(handleError)
+          .submitDispute(formData);
+      }
+      
+      function onDisputeSubmitted(result) {
+        if (result.success) {
+          // Display dispute ID in confirmation screen
+          document.getElementById('disputeId').textContent = result.disputeId;
+          
+          // Go to confirmation step
+          goToNextStep();
+          
+          showNotification('Dispute submitted successfully', 'success');
+        } else {
+          showNotification('Error submitting dispute: ' + result.message, 'error');
+        }
+      }
+      
+      function handleError(error) {
+        console.error('Error:', error);
+        showNotification('Error: ' + error.message, 'error');
+      }
+      
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
