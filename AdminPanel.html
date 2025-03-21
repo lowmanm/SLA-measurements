@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('UI/styles'); ?>
+  </head>
+  <body>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Admin Panel</h2>
+        <button id="closeBtn" class="secondary">
+          <i class="material-icons">close</i> Close
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="tabs">
+          <div class="tab active" data-target="questionSetsTab">
+            <i class="material-icons">format_list_bulleted</i> Question Sets
+          </div>
+          <div class="tab" data-target="settingsTab">
+            <i class="material-icons">settings</i> Settings
+          </div>
+          <div class="tab" data-target="systemTab">
+            <i class="material-icons">build</i> System
+          </div>
+        </div>
+        
+        <!-- Question Sets Tab -->
+        <div id="questionSetsTab" class="tab-content active">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Evaluation Question Sets</h3>
+              <button id="addQuestionSetBtn" class="primary">
+                <i class="material-icons">add</i> New Question Set
+              </button>
+            </div>
+            
+            <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+              <table id="questionSetsTable">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Interaction Type</th>
+                    <th>Question Count</th>
+                    <th>Last Updated</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="questionSetsTableBody">
+                  <tr>
+                    <td colspan="5" class="text-center">Loading question sets...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div id="questionSetDetails" class="card" style="display: none;">
+            <div class="card-header">
+              <h3 class="card-title">Question Set Details</h3>
+              <div>
+                <button id="saveQuestionSetBtn" class="primary">
+                  <i class="material-icons">save</i> Save
+                </button>
+                <button id="cancelEditBtn" class="secondary">
+                  <i class="material-icons">close</i> Cancel
+                </button>
+              </div>
+            </div>
+            
+            <form id="questionSetForm">
+              <input type="hidden" id="questionSetId" name="id">
+              
+              <div class="flex gap-16 mb-16">
+                <div class="flex-1">
+                  <label for="questionSetName">Name:</label>
+                  <input type="text" id="questionSetName" name="name" required>
+                </div>
+                <div class="flex-1">
+                  <label for="interactionType">Interaction Type:</label>
+                  <input type="text" id="interactionType" name="interactionType" required>
+                </div>
+              </div>
+              
+              <div class="mb-16">
+                <label for="questionSetDescription">Description:</label>
+                <textarea id="questionSetDescription" name="description" rows="2"></textarea>
+              </div>
+              
+              <h4>Questions</h4>
+              <div id="questionsContainer">
+                <!-- Questions will be dynamically added here -->
+              </div>
+              
+              <div class="text-center mt-16">
+                <button type="button" id="addQuestionBtn" class="secondary">
+                  <i class="material-icons">add</i> Add Question
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div id="settingsTab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Platform Settings</h3>
+              <button id="saveSettingsBtn" class="primary">
+                <i class="material-icons">save</i> Save Settings
+              </button>
+            </div>
+            
+            <form id="settingsForm">
+              <div class="mb-16">
+                <h4>General Settings</h4>
+                
+                <div class="flex gap-16">
+                  <div class="flex-1">
+                    <label for="companyName">Company Name:</label>
+                    <input type="text" id="companyName" name="company_name">
+                  </div>
+                  <div class="flex-1">
+                    <label for="platformName">Platform Name:</label>
+                    <input type="text" id="platformName" name="platform_name" value="QA Platform">
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mb-16">
+                <h4>Evaluation Settings</h4>
+                
+                <div class="flex gap-16">
+                  <div class="flex-1">
+                    <label for="passingScore">Passing Score (%):</label>
+                    <input type="number" id="passingScore" name="passing_score_percentage" min="0" max="100" value="80">
+                  </div>
+                  <div class="flex-1">
+                    <label for="evaluationPeriod">Evaluation Period (days):</label>
+                    <input type="number" id="evaluationPeriod" name="evaluation_period_days" min="1" max="90" value="30">
+                  </div>
+                </div>
+                
+                <div class="flex gap-16 mt-8">
+                  <div class="flex-1">
+                    <label for="criticalQuestionWeight">Critical Question Weight:</label>
+                    <input type="number" id="criticalQuestionWeight" name="critical_question_weight" min="1" max="10" value="5">
+                  </div>
+                  <div class="flex-1">
+                    <label for="standardQuestionWeight">Standard Question Weight:</label>
+                    <input type="number" id="standardQuestionWeight" name="standard_question_weight" min="1" max="5" value="1">
+                  </div>
+                </div>
+                
+                <div class="flex gap-16 mt-8">
+                  <div class="flex-1">
+                    <label for="evaluationsPerAgent">Required Evaluations Per Agent:</label>
+                    <input type="number" id="evaluationsPerAgent" name="evaluations_per_agent" min="1" max="20" value="4">
+                  </div>
+                  <div class="flex-1">
+                    <label for="disputeTimeLimit">Dispute Time Limit (days):</label>
+                    <input type="number" id="disputeTimeLimit" name="dispute_time_limit_days" min="1" max="30" value="5">
+                  </div>
+                </div>
+                
+                <div class="flex items-center gap-8 mt-8">
+                  <input type="checkbox" id="autoNotifyAgent" name="auto_notify_agent" checked>
+                  <label for="autoNotifyAgent" style="margin-bottom: 0;">Automatically notify agents when evaluation is completed</label>
+                </div>
+                
+                <div class="flex items-center gap-8 mt-8">
+                  <input type="checkbox" id="autoNotifyManager" name="auto_notify_manager" checked>
+                  <label for="autoNotifyManager" style="margin-bottom: 0;">Automatically notify managers when evaluation is completed</label>
+                </div>
+              </div>
+              
+              <div class="mb-16">
+                <h4>Email Settings</h4>
+                
+                <div class="flex gap-16">
+                  <div class="flex-1">
+                    <label for="emailSender">Email Sender Name:</label>
+                    <input type="text" id="emailSender" name="email_sender_name" value="QA Platform">
+                  </div>
+                  <div class="flex-1">
+                    <label for="emailFooter">Email Footer Text:</label>
+                    <input type="text" id="emailFooter" name="email_footer" value="This is an automated message from the QA Platform.">
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- System Tab -->
+        <div id="systemTab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">System Information</h3>
+              <button id="refreshSystemInfoBtn" class="secondary">
+                <i class="material-icons">refresh</i> Refresh
+              </button>
+            </div>
+            
+            <div class="mb-16">
+              <h4>Database Status</h4>
+              <div id="databaseStatus" class="mb-8"></div>
+              
+              <div class="flex gap-8">
+                <button id="checkDatabaseBtn" class="secondary">
+                  <i class="material-icons">check_circle</i> Check Database
+                </button>
+                <button id="initDatabaseBtn" class="secondary">
+                  <i class="material-icons">build</i> Initialize Database
+                </button>
+              </div>
+            </div>
+            
+            <div class="mb-16">
+              <h4>Import/Export</h4>
+              <div class="flex gap-8">
+                <button id="exportDataBtn" class="secondary">
+                  <i class="material-icons">cloud_download</i> Export Data
+                </button>
+                <button id="importDataBtn" class="secondary">
+                  <i class="material-icons">cloud_upload</i> Import Data
+                </button>
+              </div>
+            </div>
+            
+            <div class="mb-16">
+              <h4>System Logs</h4>
+              <div class="bg-light p-8" style="max-height: 200px; overflow-y: auto;">
+                <pre id="systemLogs">Loading logs...</pre>
+              </div>
+              <div class="flex gap-8 mt-8">
+                <button id="clearLogsBtn" class="secondary">
+                  <i class="material-icons">delete</i> Clear Logs
+                </button>
+                <button id="downloadLogsBtn" class="secondary">
+                  <i class="material-icons">download</i> Download Logs
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Question Template (hidden, used for adding new questions) -->
+    <template id="questionTemplate">
+      <div class="card question-card mb-16">
+        <div class="card-header">
+          <h4 class="card-title">Question <span class="question-number"></span></h4>
+          <button type="button" class="remove-question danger">
+            <i class="material-icons">delete</i>
+          </button>
+        </div>
+        
+        <div class="mb-8">
+          <label for="questionText">Question Text:</label>
+          <textarea name="question_text" class="question-text" rows="2" required></textarea>
+        </div>
+        
+        <div class="flex gap-16 mb-8">
+          <div class="flex-1">
+            <label for="questionSection">Section:</label>
+            <input type="text" name="question_section" class="question-section" required>
+          </div>
+          <div class="flex-1">
+            <label for="questionWeight">Weight:</label>
+            <input type="number" name="question_weight" class="question-weight" min="1" max="10" value="1" required>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-8">
+          <input type="checkbox" name="question_critical" class="question-critical">
+          <label style="margin-bottom: 0;">Mark as Critical Question</label>
+        </div>
+      </div>
+    </template>
+    
+    <?!= include('UI/scripts'); ?>
+    <script>
+      // Variables to store state
+      let questionSets = [];
+      let questions = [];
+      let settings = {};
+      let currentQuestionSet = null;
+      let isEditingQuestionSet = false;
+      
+      // Initialize the admin panel
+      document.addEventListener('DOMContentLoaded', function() {
+        // Set up tab navigation
+        setupTabs();
+        
+        // Set up event listeners
+        document.getElementById('closeBtn').addEventListener('click', closeDialog);
+        document.getElementById('addQuestionSetBtn').addEventListener('click', createNewQuestionSet);
+        document.getElementById('saveQuestionSetBtn').addEventListener('click', saveQuestionSet);
+        document.getElementById('cancelEditBtn').addEventListener('click', cancelEditQuestionSet);
+        document.getElementById('addQuestionBtn').addEventListener('click', addNewQuestion);
+        
+        document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+        
+        document.getElementById('refreshSystemInfoBtn').addEventListener('click', refreshSystemInfo);
+        document.getElementById('checkDatabaseBtn').addEventListener('click', checkDatabase);
+        document.getElementById('initDatabaseBtn').addEventListener('click', initializeDatabase);
+        document.getElementById('exportDataBtn').addEventListener('click', exportData);
+        document.getElementById('importDataBtn').addEventListener('click', importData);
+        document.getElementById('clearLogsBtn').addEventListener('click', clearLogs);
+        document.getElementById('downloadLogsBtn').addEventListener('click', downloadLogs);
+        
+        // Load initial data
+        loadQuestionSets();
+        loadSettings();
+        loadSystemInfo();
+      });
+      
+      // Question Sets Tab Functions
+      function loadQuestionSets() {
+        showNotification('Loading question sets...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(populateQuestionSets)
+          .withFailureHandler(handleError)
+          .getQuestionSets();
+      }
+      
+      function populateQuestionSets(data) {
+        questionSets = data;
+        
+        if (!questionSets || questionSets.length === 0) {
+          document.getElementById('questionSetsTableBody').innerHTML = 
+            '<tr><td colspan="5" class="text-center">No question sets found</td></tr>';
+          return;
+        }
+        
+        renderQuestionSetsTable();
+        
+        showNotification('Question sets loaded successfully', 'success');
+      }
+      
+      function renderQuestionSetsTable() {
+        const tableBody = document.getElementById('questionSetsTableBody');
+        tableBody.innerHTML = '';
+        
+        questionSets.forEach(set => {
+          const row = document.createElement('tr');
+          
+          // Name column
+          const nameCell = document.createElement('td');
+          nameCell.textContent = set.name;
+          row.appendChild(nameCell);
+          
+          // Interaction Type column
+          const typeCell = document.createElement('td');
+          typeCell.textContent = set.interactionType;
+          row.appendChild(typeCell);
+          
+          // Question Count column
+          const countCell = document.createElement('td');
+          countCell.textContent = set.questions ? set.questions.length : 0;
+          row.appendChild(countCell);
+          
+          // Last Updated column
+          const updatedCell = document.createElement('td');
+          updatedCell.textContent = formatDate(set.lastUpdated);
+          row.appendChild(updatedCell);
+          
+          // Actions column
+          const actionsCell = document.createElement('td');
+          
+          const editBtn = document.createElement('button');
+          editBtn.className = 'primary btn-sm';
+          editBtn.innerHTML = '<i class="material-icons">edit</i>';
+          editBtn.title = 'Edit Question Set';
+          editBtn.dataset.id = set.id;
+          editBtn.addEventListener('click', function() {
+            editQuestionSet(set.id);
+          });
+          
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'danger btn-sm';
+          deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+          deleteBtn.title = 'Delete Question Set';
+          deleteBtn.dataset.id = set.id;
+          deleteBtn.addEventListener('click', function() {
+            deleteQuestionSet(set.id);
+          });
+          
+          actionsCell.appendChild(editBtn);
+          actionsCell.appendChild(document.createTextNode(' '));
+          actionsCell.appendChild(deleteBtn);
+          
+          row.appendChild(actionsCell);
+          
+          tableBody.appendChild(row);
+        });
+      }
+      
+      function createNewQuestionSet() {
+        isEditingQuestionSet = false;
+        currentQuestionSet = {
+          id: generateTempId(),
+          name: '',
+          interactionType: '',
+          description: '',
+          questions: []
+        };
+        
+        populateQuestionSetForm(currentQuestionSet);
+        showQuestionSetDetails();
+      }
+      
+      function editQuestionSet(id) {
+        isEditingQuestionSet = true;
+        currentQuestionSet = questionSets.find(set => set.id === id);
+        
+        if (!currentQuestionSet) {
+          showNotification('Question set not found', 'error');
+          return;
+        }
+        
+        populateQuestionSetForm(currentQuestionSet);
+        showQuestionSetDetails();
+      }
+      
+      function deleteQuestionSet(id) {
+        const set = questionSets.find(set => set.id === id);
+        if (!set) {
+          showNotification('Question set not found', 'error');
+          return;
+        }
+        
+        // Confirm deletion
+        const confirmed = confirm(`Are you sure you want to delete the question set "${set.name}"? This cannot be undone.`);
+        if (!confirmed) return;
+        
+        showNotification('Deleting question set...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onQuestionSetDeleted)
+          .withFailureHandler(handleError)
+          .deleteQuestionSet(id);
+      }
+      
+      function onQuestionSetDeleted(result) {
+        if (result.success) {
+          loadQuestionSets();
+          showNotification(result.message, 'success');
+        } else {
+          showNotification('Error: ' + result.message, 'error');
+        }
+      }
+      
+      function populateQuestionSetForm(set) {
+        document.getElementById('questionSetId').value = set.id;
+        document.getElementById('questionSetName').value = set.name;
+        document.getElementById('interactionType').value = set.interactionType;
+        document.getElementById('questionSetDescription').value = set.description || '';
+        
+        // Clear existing questions
+        const questionsContainer = document.getElementById('questionsContainer');
+        questionsContainer.innerHTML = '';
+        
+        // Add questions
+        if (set.questions && set.questions.length > 0) {
+          set.questions.forEach((question, index) => {
+            addQuestionToForm(question, index + 1);
+          });
+        } else {
+          // Add one empty question if there are none
+          addNewQuestion();
+        }
+      }
+      
+      function showQuestionSetDetails() {
+        document.getElementById('questionSetDetails').style.display = 'block';
+      }
+      
+      function hideQuestionSetDetails() {
+        document.getElementById('questionSetDetails').style.display = 'none';
+      }
+      
+      function addNewQuestion() {
+        const index = document.querySelectorAll('.question-card').length + 1;
+        const question = {
+          id: generateTempId(),
+          text: '',
+          section: '',
+          weight: 1,
+          critical: false
+        };
+        
+        addQuestionToForm(question, index);
+      }
+      
+      function addQuestionToForm(question, index) {
+        // Clone the template
+        const template = document.getElementById('questionTemplate');
+        const questionElement = template.content.cloneNode(true);
+        
+        // Set the question number
+        questionElement.querySelector('.question-number').textContent = index;
+        
+        // Set the values
+        const textArea = questionElement.querySelector('.question-text');
+        textArea.value = question.text;
+        textArea.name = `question_text_${question.id}`;
+        textArea.id = `question_text_${question.id}`;
+        
+        const sectionInput = questionElement.querySelector('.question-section');
+        sectionInput.value = question.section;
+        sectionInput.name = `question_section_${question.id}`;
+        sectionInput.id = `question_section_${question.id}`;
+        
+        const weightInput = questionElement.querySelector('.question-weight');
+        weightInput.value = question.weight;
+        weightInput.name = `question_weight_${question.id}`;
+        weightInput.id = `question_weight_${question.id}`;
+        
+        const criticalCheckbox = questionElement.querySelector('.question-critical');
+        criticalCheckbox.checked = question.critical;
+        criticalCheckbox.name = `question_critical_${question.id}`;
+        criticalCheckbox.id = `question_critical_${question.id}`;
+        
+        // Add question ID as data attribute
+        const questionCard = questionElement.querySelector('.question-card');
+        questionCard.dataset.questionId = question.id;
+        
+        // Add event listener to remove button
+        const removeButton = questionElement.querySelector('.remove-question');
+        removeButton.addEventListener('click', function() {
+          removeQuestion(question.id);
+        });
+        
+        // Add to the container
+        document.getElementById('questionsContainer').appendChild(questionElement);
+      }
+      
+      function removeQuestion(questionId) {
+        const questionCard = document.querySelector(`.question-card[data-question-id="${questionId}"]`);
+        if (questionCard) {
+          // Check if this is the last question
+          const questionCards = document.querySelectorAll('.question-card');
+          if (questionCards.length <= 1) {
+            showNotification('Cannot remove last question. Question sets must have at least one question.', 'warning');
+            return;
+          }
+          
+          questionCard.remove();
+          
+          // Renumber remaining questions
+          document.querySelectorAll('.question-card').forEach((card, index) => {
+            card.querySelector('.question-number').textContent = index + 1;
+          });
+        }
+      }
+      
+      function saveQuestionSet() {
+        const form = document.getElementById('questionSetForm');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        
+        // Collect form data
+        const questionSetData = {
+          id: document.getElementById('questionSetId').value,
+          name: document.getElementById('questionSetName').value,
+          interactionType: document.getElementById('interactionType').value,
+          description: document.getElementById('questionSetDescription').value,
+          questions: []
+        };
+        
+        // Collect questions
+        document.querySelectorAll('.question-card').forEach(card => {
+          const questionId = card.dataset.questionId;
+          
+          questionSetData.questions.push({
+            id: questionId,
+            text: document.getElementById(`question_text_${questionId}`).value,
+            section: document.getElementById(`question_section_${questionId}`).value,
+            weight: parseInt(document.getElementById(`question_weight_${questionId}`).value),
+            critical: document.getElementById(`question_critical_${questionId}`).checked
+          });
+        });
+        
+        showNotification('Saving question set...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onQuestionSetSaved)
+          .withFailureHandler(handleError)
+          .saveQuestionSet(questionSetData);
+      }
+      
+      function onQuestionSetSaved(result) {
+        if (result.success) {
+          hideQuestionSetDetails();
+          loadQuestionSets();
+          showNotification(result.message, 'success');
+        } else {
+          showNotification('Error: ' + result.message, 'error');
+        }
+      }
+      
+      function cancelEditQuestionSet() {
+        hideQuestionSetDetails();
+        currentQuestionSet = null;
+      }
+      
+      // Settings Tab Functions
+      function loadSettings() {
+        showNotification('Loading settings...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(populateSettings)
+          .withFailureHandler(handleError)
+          .getSettings();
+      }
+      
+      function populateSettings(data) {
+        settings = data;
+        
+        // Populate the form with settings
+        for (const key in settings) {
+          const element = document.getElementById(key);
+          if (element) {
+            if (element.type === 'checkbox') {
+              element.checked = settings[key] === true || settings[key] === 'true';
+            } else {
+              element.value = settings[key];
+            }
+          }
+        }
+        
+        showNotification('Settings loaded successfully', 'success');
+      }
+      
+      function saveSettings() {
+        const form = document.getElementById('settingsForm');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        
+        // Collect form data
+        const formData = new FormData(form);
+        const settingsData = {};
+        
+        for (const [key, value] of formData.entries()) {
+          settingsData[key] = value;
+        }
+        
+        // Handle checkboxes
+        document.querySelectorAll('#settingsForm input[type="checkbox"]').forEach(checkbox => {
+          settingsData[checkbox.name] = checkbox.checked;
+        });
+        
+        showNotification('Saving settings...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onSettingsSaved)
+          .withFailureHandler(handleError)
+          .saveSettings(settingsData);
+      }
+      
+      function onSettingsSaved(result) {
+        if (result.success) {
+          loadSettings();
+          showNotification(result.message, 'success');
+        } else {
+          showNotification('Error: ' + result.message, 'error');
+        }
+      }
+      
+      // System Tab Functions
+      function loadSystemInfo() {
+        showNotification('Loading system information...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(populateSystemInfo)
+          .withFailureHandler(handleError)
+          .getSystemInfo();
+      }
+      
+      function populateSystemInfo(data) {
+        // Display database status
+        const databaseStatusElement = document.getElementById('databaseStatus');
+        
+        if (data.databaseInitialized) {
+          databaseStatusElement.innerHTML = `
+            <div class="status-badge status-completed">Database Initialized</div>
+            <div class="mt-8">
+              <p><strong>Total Records:</strong> ${data.recordCounts.total}</p>
+              <p><strong>Users:</strong> ${data.recordCounts.users}</p>
+              <p><strong>Question Sets:</strong> ${data.recordCounts.questionSets}</p>
+              <p><strong>Evaluations:</strong> ${data.recordCounts.evaluations}</p>
+              <p><strong>Disputes:</strong> ${data.recordCounts.disputes}</p>
+            </div>
+          `;
+        } else {
+          databaseStatusElement.innerHTML = `
+            <div class="status-badge status-failed">Database Not Initialized</div>
+            <div class="mt-8">
+              <p>Please initialize the database to start using the platform.</p>
+            </div>
+          `;
+        }
+        
+        // Display system logs
+        document.getElementById('systemLogs').textContent = data.logs.join('\n');
+        
+        showNotification('System information loaded successfully', 'success');
+      }
+      
+      function refreshSystemInfo() {
+        loadSystemInfo();
+      }
+      
+      function checkDatabase() {
+        showNotification('Checking database...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onDatabaseChecked)
+          .withFailureHandler(handleError)
+          .checkDatabase();
+      }
+      
+      function onDatabaseChecked(result) {
+        showNotification(result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+          loadSystemInfo();
+        }
+      }
+      
+      function initializeDatabase() {
+        // Confirm initialization
+        const confirmed = confirm('Are you sure you want to initialize the database? This will create all required sheets and may overwrite existing data.');
+        if (!confirmed) return;
+        
+        showNotification('Initializing database...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onDatabaseInitialized)
+          .withFailureHandler(handleError)
+          .initializeDatabase();
+      }
+      
+      function onDatabaseInitialized(result) {
+        showNotification(result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+          loadSystemInfo();
+        }
+      }
+      
+      function exportData() {
+        showNotification('Preparing data export...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onExportPrepared)
+          .withFailureHandler(handleError)
+          .prepareDataExport();
+      }
+      
+      function onExportPrepared(result) {
+        if (result.success) {
+          showNotification('Data export prepared. Downloading...', 'success');
+          
+          // Trigger download
+          google.script.run
+            .withSuccessHandler(showNotification('Data export complete.', 'success'))
+            .withFailureHandler(handleError)
+            .downloadExportedData();
+        } else {
+          showNotification('Error: ' + result.message, 'error');
+        }
+      }
+      
+      function importData() {
+        showNotification('This function is not yet implemented.', 'info');
+        
+        // This would typically show a file upload dialog for importing data
+        // For now, just show a message
+        alert('To import data, please upload the export file to the "Imports" folder in Google Drive and then use the Data Import function from the admin menu.');
+      }
+      
+      function clearLogs() {
+        // Confirm clearing logs
+        const confirmed = confirm('Are you sure you want to clear all system logs?');
+        if (!confirmed) return;
+        
+        showNotification('Clearing system logs...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onLogsCleared)
+          .withFailureHandler(handleError)
+          .clearSystemLogs();
+      }
+      
+      function onLogsCleared(result) {
+        showNotification(result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+          document.getElementById('systemLogs').textContent = 'No logs available.';
+        }
+      }
+      
+      function downloadLogs() {
+        showNotification('Preparing logs for download...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onLogsDownloadPrepared)
+          .withFailureHandler(handleError)
+          .prepareLogsDownload();
+      }
+      
+      function onLogsDownloadPrepared(result) {
+        if (result.success) {
+          showNotification('Logs prepared for download. Downloading...', 'success');
+          
+          // Trigger download
+          google.script.run
+            .withSuccessHandler(showNotification('Logs download complete.', 'success'))
+            .withFailureHandler(handleError)
+            .downloadLogs();
+        } else {
+          showNotification('Error: ' + result.message, 'error');
+        }
+      }
+      
+      // Utility Functions
+      function generateTempId() {
+        return 'temp_' + Math.random().toString(36).substr(2, 9);
+      }
+      
+      function handleError(error) {
+        console.error('Error:', error);
+        showNotification('Error: ' + error.message, 'error');
+      }
+      
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
