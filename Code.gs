@@ -13,7 +13,92 @@
  * @return {HtmlOutput} HTML content to display
  */
 function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('index');
+  // Determine which page to display based on parameters
+  const params = e.parameter || {};
+  const page = params.page || 'main';
+  
+  // Initialize database if needed (only run by admin)
+  const isInitialized = isDatabaseInitialized();
+  if (!isInitialized) {
+    const userInfo = getUserInfo();
+    if (userInfo && userInfo.role === USER_ROLES.ADMIN) {
+      // Auto-initialize for admin users
+      initializeDatabase();
+    } else if (page !== 'login') {
+      // Redirect non-admins to login page if database is not initialized
+      return HtmlService.createTemplateFromFile('UI/LoginPage')
+        .evaluate()
+        .setTitle('QA Platform - Login Required')
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+  }
+  
+  // Check if user is authenticated (except for login page)
+  if (page !== 'login') {
+    const userInfo = getUserInfo();
+    if (!userInfo || !userInfo.role) {
+      // User is not authenticated, redirect to login
+      return HtmlService.createTemplateFromFile('UI/LoginPage')
+        .evaluate()
+        .setTitle('QA Platform - Login Required')
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+  }
+  
+  // Serve the appropriate page
+  let template;
+  let title = 'QA Platform';
+  
+  switch (page) {
+    case 'login':
+      template = HtmlService.createTemplateFromFile('UI/LoginPage');
+      title = 'QA Platform - Login';
+      break;
+      
+    case 'dashboard':
+      template = HtmlService.createTemplateFromFile('UI/Dashboard');
+      title = 'QA Platform - Dashboard';
+      break;
+      
+    case 'evaluation':
+      template = HtmlService.createTemplateFromFile('UI/EvaluationForm');
+      title = 'QA Platform - Evaluation';
+      break;
+      
+    case 'dispute':
+      template = HtmlService.createTemplateFromFile('UI/DisputeForm');
+      title = 'QA Platform - File Dispute';
+      break;
+      
+    case 'review':
+      template = HtmlService.createTemplateFromFile('UI/DisputeReview');
+      title = 'QA Platform - Review Disputes';
+      break;
+      
+    case 'users':
+      template = HtmlService.createTemplateFromFile('UI/UserManagement');
+      title = 'QA Platform - User Management';
+      break;
+      
+    case 'admin':
+      template = HtmlService.createTemplateFromFile('UI/AdminPanel');
+      title = 'QA Platform - Administration';
+      break;
+      
+    default:
+      // Main application page with navigation
+      template = HtmlService.createTemplateFromFile('UI/MainApp');
+      title = 'QA Platform';
+  }
+  
+  // Render the template and return the HTML output
+  return template
+    .evaluate()
+    .setTitle(title)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // Global Constants
