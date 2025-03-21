@@ -1,0 +1,197 @@
+/**
+ * User Management
+ * 
+ * This file contains functions for user authentication, role management,
+ * and access control throughout the QA platform.
+ */
+
+/**
+ * Get the role of the current user
+ * 
+ * @param {string} email - User's email address
+ * @return {string} User role from USER_ROLES or empty string if not found
+ */
+function getUserRole(email) {
+  const usersSheet = spreadsheet.getSheetByName(SHEET_NAMES.USERS);
+  const userData = usersSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < userData.length; i++) {
+    if (userData[i][0] === email) {
+      return userData[i][2]; // Role column
+    }
+  }
+  
+  return '';
+}
+
+/**
+ * Check if the current user has permission for a specific action
+ * 
+ * @param {string} requiredRole - Minimum role required for the action
+ * @return {boolean} Whether user has permission
+ */
+function hasPermission(requiredRole) {
+  const userRole = getUserRole(currentUser);
+  
+  switch (requiredRole) {
+    case USER_ROLES.QA_ANALYST:
+      return [USER_ROLES.QA_ANALYST, USER_ROLES.QA_MANAGER, USER_ROLES.ADMIN].includes(userRole);
+    
+    case USER_ROLES.AGENT_MANAGER:
+      return [USER_ROLES.AGENT_MANAGER, USER_ROLES.QA_MANAGER, USER_ROLES.ADMIN].includes(userRole);
+    
+    case USER_ROLES.QA_MANAGER:
+      return [USER_ROLES.QA_MANAGER, USER_ROLES.ADMIN].includes(userRole);
+    
+    case USER_ROLES.ADMIN:
+      return userRole === USER_ROLES.ADMIN;
+    
+    default:
+      return false;
+  }
+}
+
+/**
+ * Get all users from the users sheet
+ * 
+ * @return {Array} Array of user objects
+ */
+function getAllUsers() {
+  return getDataFromSheet(SHEET_NAMES.USERS);
+}
+
+/**
+ * Get user information by email
+ * 
+ * @param {string} email - User's email address
+ * @return {Object|null} User data or null if not found
+ */
+function getUserByEmail(email) {
+  const users = getAllUsers();
+  return users.find(user => user.Email === email) || null;
+}
+
+/**
+ * Add a new user
+ * 
+ * @param {string} email - User's email address
+ * @param {string} name - User's full name
+ * @param {string} role - User's role (from USER_ROLES)
+ * @param {string} department - User's department
+ * @return {boolean} Success status
+ */
+function addUser(email, name, role, department) {
+  if (!hasPermission(USER_ROLES.ADMIN)) {
+    throw new Error('You do not have permission to add users');
+  }
+  
+  // Check if user already exists
+  const existingUser = getUserByEmail(email);
+  if (existingUser) {
+    throw new Error(`User with email ${email} already exists`);
+  }
+  
+  const userData = {
+    Email: email,
+    Name: name,
+    Role: role,
+    Active: true,
+    'Last Login': new Date(),
+    Department: department
+  };
+  
+  addRowToSheet(SHEET_NAMES.USERS, userData);
+  return true;
+}
+
+/**
+ * Update a user's information
+ * 
+ * @param {string} email - User's email address
+ * @param {Object} userData - Object with user data to update
+ * @return {boolean} Success status
+ */
+function updateUser(email, userData) {
+  if (!hasPermission(USER_ROLES.ADMIN)) {
+    throw new Error('You do not have permission to update users');
+  }
+  
+  const sheet = spreadsheet.getSheetByName(SHEET_NAMES.USERS);
+  const data = sheet.getDataRange().getValues();
+  
+  // Find the user row
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === email) {
+      // Update user data
+      updateRowInSheet(SHEET_NAMES.USERS, i + 1, userData);
+      return true;
+    }
+  }
+  
+  throw new Error(`User with email ${email} not found`);
+}
+
+/**
+ * Disable a user account (soft delete)
+ * 
+ * @param {string} email - User's email address
+ * @return {boolean} Success status
+ */
+function disableUser(email) {
+  if (!hasPermission(USER_ROLES.ADMIN)) {
+    throw new Error('You do not have permission to disable users');
+  }
+  
+  // Don't allow disabling own account
+  if (email === currentUser) {
+    throw new Error('You cannot disable your own account');
+  }
+  
+  // Update the Active status to false
+  updateUser(email, { Active: false });
+  return true;
+}
+
+/**
+ * Get all active QA Analysts
+ * 
+ * @return {Array} Array of QA Analyst user objects
+ */
+function getAllQAAnalysts() {
+  const users = getAllUsers();
+  return users.filter(user => 
+    user.Role === USER_ROLES.QA_ANALYST && 
+    user.Active === true
+  );
+}
+
+/**
+ * Get all active Agent Managers
+ * 
+ * @return {Array} Array of Agent Manager user objects
+ */
+function getAllAgentManagers() {
+  const users = getAllUsers();
+  return users.filter(user => 
+    user.Role === USER_ROLES.AGENT_MANAGER && 
+    user.Active === true
+  );
+}
+
+/**
+ * Show UI for user management
+ */
+function showUserManager() {
+  if (!hasPermission(USER_ROLES.ADMIN)) {
+    SpreadsheetApp.getUi().alert('You do not have permission to manage users');
+    return;
+  }
+  
+  const html = HtmlService.createTemplateFromFile('UI/UserManagement')
+    .evaluate()
+    .setTitle('User Management')
+    .setWidth(700)
+    .setHeight(600);
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'User Management');
+}
