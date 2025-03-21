@@ -1,122 +1,270 @@
 /**
- * Database Operations 
+ * DatabaseOperations.gs
  * 
- * This file contains all the functions for interacting with the Google Sheets data storage.
- * It provides methods for CRUD operations on all sheets used by the QA platform.
+ * This file contains functions for interacting with the Google Sheet database.
+ * It handles sheet creation, data retrieval, and CRUD operations.
  */
 
 /**
- * Get all data from a specified sheet as an array of objects
+ * Initialize the database by creating all required sheets
  * 
- * @param {string} sheetName - Name of the sheet to get data from
+ * @return {Object} Result object with success flag and message
+ */
+function initializeDatabase() {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Check if database is already initialized
+    if (isDatabaseInitialized()) {
+      return {
+        success: false,
+        message: 'Database is already initialized'
+      };
+    }
+    
+    // Create users sheet
+    if (!sheetExists(SHEET_NAMES.USERS)) {
+      const usersSheet = spreadsheet.insertSheet(SHEET_NAMES.USERS);
+      
+      // Set up headers
+      usersSheet.getRange('A1:I1').setValues([['ID', 'Name', 'Email', 'Role', 'Department', 'Manager', 'Created', 'Last Login', 'Notes']]);
+      usersSheet.getRange('A:I').setWrap(true);
+      
+      // Create first admin user (the owner of the spreadsheet)
+      const currentUserEmail = Session.getActiveUser().getEmail();
+      const now = new Date();
+      const userData = [
+        generateUniqueId(),
+        'Administrator',
+        currentUserEmail,
+        USER_ROLES.ADMIN,
+        'Administration',
+        '',
+        now,
+        now,
+        'Initial admin user created during database initialization'
+      ];
+      
+      usersSheet.getRange(2, 1, 1, 9).setValues([userData]);
+      
+      // Format the sheet
+      usersSheet.setFrozenRows(1);
+      usersSheet.getRange(1, 1, 1, 9).setBackground('#f1f3f4').setFontWeight('bold');
+      usersSheet.autoResizeColumns(1, 9);
+    }
+    
+    // Create question sets sheet
+    if (!sheetExists(SHEET_NAMES.QUESTION_SETS)) {
+      const qsSheet = spreadsheet.insertSheet(SHEET_NAMES.QUESTION_SETS);
+      
+      // Set up headers
+      qsSheet.getRange('A1:G1').setValues([['ID', 'Name', 'Description', 'Category', 'Interaction Type', 'Created By', 'Last Modified']]);
+      qsSheet.getRange('A:G').setWrap(true);
+      
+      // Format the sheet
+      qsSheet.setFrozenRows(1);
+      qsSheet.getRange(1, 1, 1, 7).setBackground('#f1f3f4').setFontWeight('bold');
+      qsSheet.autoResizeColumns(1, 7);
+    }
+    
+    // Create questions sheet
+    if (!sheetExists(SHEET_NAMES.QUESTIONS)) {
+      const qSheet = spreadsheet.insertSheet(SHEET_NAMES.QUESTIONS);
+      
+      // Set up headers
+      qSheet.getRange('A1:I1').setValues([['ID', 'Question Set ID', 'Question', 'Type', 'Weight', 'Possible Score', 'Critical', 'Options', 'Help Text']]);
+      qSheet.getRange('A:I').setWrap(true);
+      
+      // Format the sheet
+      qSheet.setFrozenRows(1);
+      qSheet.getRange(1, 1, 1, 9).setBackground('#f1f3f4').setFontWeight('bold');
+      qSheet.autoResizeColumns(1, 9);
+    }
+    
+    // Create audit queue sheet
+    if (!sheetExists(SHEET_NAMES.AUDIT_QUEUE)) {
+      const aqSheet = spreadsheet.insertSheet(SHEET_NAMES.AUDIT_QUEUE);
+      
+      // Set up headers
+      aqSheet.getRange('A1:K1').setValues([['ID', 'Date', 'Agent', 'Customer ID', 'Interaction ID', 'Interaction Type', 'Assigned To', 'Status', 'Priority', 'Due Date', 'Notes']]);
+      aqSheet.getRange('A:K').setWrap(true);
+      
+      // Format the sheet
+      aqSheet.setFrozenRows(1);
+      aqSheet.getRange(1, 1, 1, 11).setBackground('#f1f3f4').setFontWeight('bold');
+      aqSheet.autoResizeColumns(1, 11);
+    }
+    
+    // Create evaluations sheet
+    if (!sheetExists(SHEET_NAMES.EVALUATIONS)) {
+      const eSheet = spreadsheet.insertSheet(SHEET_NAMES.EVALUATIONS);
+      
+      // Set up headers
+      eSheet.getRange('A1:N1').setValues([['ID', 'Date', 'Agent', 'Evaluator', 'Question Set ID', 'Interaction Type', 'Customer ID', 'Interaction ID', 'Score', 'Max Possible', 'Status', 'Strengths', 'Areas for Improvement', 'Comments']]);
+      eSheet.getRange('A:N').setWrap(true);
+      
+      // Format the sheet
+      eSheet.setFrozenRows(1);
+      eSheet.getRange(1, 1, 1, 14).setBackground('#f1f3f4').setFontWeight('bold');
+      eSheet.autoResizeColumns(1, 14);
+    }
+    
+    // Create evaluation answers sheet
+    if (!sheetExists(SHEET_NAMES.EVALUATION_ANSWERS)) {
+      const eaSheet = spreadsheet.insertSheet(SHEET_NAMES.EVALUATION_ANSWERS);
+      
+      // Set up headers
+      eaSheet.getRange('A1:H1').setValues([['ID', 'Evaluation ID', 'Question ID', 'Question', 'Answer', 'Score', 'Max Score', 'Comments']]);
+      eaSheet.getRange('A:H').setWrap(true);
+      
+      // Format the sheet
+      eaSheet.setFrozenRows(1);
+      eaSheet.getRange(1, 1, 1, 8).setBackground('#f1f3f4').setFontWeight('bold');
+      eaSheet.autoResizeColumns(1, 8);
+    }
+    
+    // Create disputes sheet
+    if (!sheetExists(SHEET_NAMES.DISPUTES)) {
+      const dSheet = spreadsheet.insertSheet(SHEET_NAMES.DISPUTES);
+      
+      // Set up headers
+      dSheet.getRange('A1:L1').setValues([['ID', 'Evaluation ID', 'Submitted By', 'Submission Date', 'Reason', 'Details', 'Additional Evidence', 'Requested Score Change', 'Status', 'Reviewed By', 'Review Date', 'Score Adjustment']]);
+      dSheet.getRange('A:L').setWrap(true);
+      
+      // Format the sheet
+      dSheet.setFrozenRows(1);
+      dSheet.getRange(1, 1, 1, 12).setBackground('#f1f3f4').setFontWeight('bold');
+      dSheet.autoResizeColumns(1, 12);
+    }
+    
+    // Create dispute resolutions sheet
+    if (!sheetExists(SHEET_NAMES.DISPUTE_RESOLUTIONS)) {
+      const drSheet = spreadsheet.insertSheet(SHEET_NAMES.DISPUTE_RESOLUTIONS);
+      
+      // Set up headers
+      drSheet.getRange('A1:F1').setValues([['ID', 'Dispute ID', 'Resolution Date', 'Resolution By', 'Decision', 'Review Notes']]);
+      drSheet.getRange('A:F').setWrap(true);
+      
+      // Format the sheet
+      drSheet.setFrozenRows(1);
+      drSheet.getRange(1, 1, 1, 6).setBackground('#f1f3f4').setFontWeight('bold');
+      drSheet.autoResizeColumns(1, 6);
+    }
+    
+    // Create settings sheet
+    if (!sheetExists(SHEET_NAMES.SETTINGS)) {
+      const sSheet = spreadsheet.insertSheet(SHEET_NAMES.SETTINGS);
+      
+      // Set up headers
+      sSheet.getRange('A1:C1').setValues([['Key', 'Value', 'Description']]);
+      sSheet.getRange('A:C').setWrap(true);
+      
+      // Add default settings
+      const defaultSettings = [
+        ['version', '1.0.0', 'Current version of the QA Platform'],
+        ['company_name', 'My Company', 'Company name for display in emails and reports'],
+        ['platform_name', 'QA Platform', 'Name of the platform for display purposes'],
+        ['passing_score_percentage', '80', 'Minimum percentage score to pass an evaluation'],
+        ['dispute_time_limit_days', '5', 'Number of days allowed to dispute an evaluation'],
+        ['auto_notify_agent', 'true', 'Automatically send email notifications to agents when evaluations are completed'],
+        ['auto_notify_manager', 'true', 'Automatically send email notifications to managers when evaluations are completed'],
+        ['email_sender_name', 'QA Platform', 'Name to display as the sender of email notifications'],
+        ['email_footer', 'This is an automated message from the QA Platform.', 'Footer text for email notifications']
+      ];
+      
+      sSheet.getRange(2, 1, defaultSettings.length, 3).setValues(defaultSettings);
+      
+      // Format the sheet
+      sSheet.setFrozenRows(1);
+      sSheet.getRange(1, 1, 1, 3).setBackground('#f1f3f4').setFontWeight('bold');
+      sSheet.autoResizeColumns(1, 3);
+    }
+    
+    // Create logs sheet
+    if (!sheetExists(SHEET_NAMES.LOGS)) {
+      const lSheet = spreadsheet.insertSheet(SHEET_NAMES.LOGS);
+      
+      // Set up headers
+      lSheet.getRange('A1:D1').setValues([['Timestamp', 'User', 'Action', 'Details']]);
+      lSheet.getRange('A:D').setWrap(true);
+      
+      // Format the sheet
+      lSheet.setFrozenRows(1);
+      lSheet.getRange(1, 1, 1, 4).setBackground('#f1f3f4').setFontWeight('bold');
+      lSheet.autoResizeColumns(1, 4);
+    }
+    
+    // Log the initialization
+    logAction(Session.getActiveUser().getEmail(), 'Initialize Database', 'Database initialization completed');
+    
+    return {
+      success: true,
+      message: 'Database initialized successfully'
+    };
+  } catch (error) {
+    Logger.log(`Error in initializeDatabase: ${error.message}`);
+    return {
+      success: false,
+      message: `Error initializing database: ${error.message}`
+    };
+  }
+}
+
+/**
+ * Get data from a sheet as an array of objects
+ * 
+ * @param {string} sheetName - The name of the sheet to get data from
  * @return {Array} Array of objects with column headers as keys
  */
 function getDataFromSheet(sheetName) {
-  const sheet = spreadsheet.getSheetByName(sheetName);
-  if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found`);
-  }
-  
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const result = [];
-  
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const obj = {};
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = spreadsheet.getSheetByName(sheetName);
     
-    for (let j = 0; j < headers.length; j++) {
-      obj[headers[j]] = row[j];
+    if (!sheet) {
+      Logger.log(`Sheet not found: ${sheetName}`);
+      return [];
     }
     
-    result.push(obj);
+    const data = sheet.getDataRange().getValues();
+    
+    if (data.length <= 1) {
+      // Only has header row or is empty
+      return [];
+    }
+    
+    const headers = data[0];
+    const result = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const obj = {};
+      
+      for (let j = 0; j < headers.length; j++) {
+        obj[headers[j]] = row[j];
+      }
+      
+      result.push(obj);
+    }
+    
+    return result;
+  } catch (error) {
+    Logger.log(`Error in getDataFromSheet: ${error.message}`);
+    return [];
   }
-  
-  return result;
 }
 
 /**
- * Add a new row to a sheet
+ * Get filtered data from a sheet based on criteria
  * 
- * @param {string} sheetName - Name of the sheet
- * @param {Object} rowData - Object with data to add (keys should match column headers)
- * @return {number} Row index of the newly added row
+ * @param {string} sheetName - The name of the sheet to get data from
+ * @param {Object} criteria - Object with column names as keys and values to match
+ * @return {Array} Array of objects that match the criteria
  */
-function addRowToSheet(sheetName, rowData) {
-  const sheet = spreadsheet.getSheetByName(sheetName);
-  if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found`);
-  }
+function getFilteredData(sheetName, criteria) {
+  const data = getDataFromSheet(sheetName);
   
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const newRow = [];
-  
-  for (const header of headers) {
-    newRow.push(rowData[header] !== undefined ? rowData[header] : '');
-  }
-  
-  sheet.appendRow(newRow);
-  return sheet.getLastRow();
-}
-
-/**
- * Update a row in a sheet
- * 
- * @param {string} sheetName - Name of the sheet
- * @param {number} rowIndex - Index of the row to update (1-based)
- * @param {Object} rowData - Object with data to update (keys should match column headers)
- */
-function updateRowInSheet(sheetName, rowIndex, rowData) {
-  const sheet = spreadsheet.getSheetByName(sheetName);
-  if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found`);
-  }
-  
-  if (rowIndex <= 1 || rowIndex > sheet.getLastRow()) {
-    throw new Error(`Invalid row index: ${rowIndex}`);
-  }
-  
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const updatedRow = [];
-  
-  for (const header of headers) {
-    const currentValue = sheet.getRange(rowIndex, headers.indexOf(header) + 1).getValue();
-    updatedRow.push(rowData[header] !== undefined ? rowData[header] : currentValue);
-  }
-  
-  sheet.getRange(rowIndex, 1, 1, updatedRow.length).setValues([updatedRow]);
-}
-
-/**
- * Delete a row from a sheet
- * 
- * @param {string} sheetName - Name of the sheet
- * @param {number} rowIndex - Index of the row to delete (1-based)
- */
-function deleteRowFromSheet(sheetName, rowIndex) {
-  const sheet = spreadsheet.getSheetByName(sheetName);
-  if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found`);
-  }
-  
-  if (rowIndex <= 1 || rowIndex > sheet.getLastRow()) {
-    throw new Error(`Invalid row index: ${rowIndex}`);
-  }
-  
-  sheet.deleteRow(rowIndex);
-}
-
-/**
- * Find rows in a sheet based on criteria
- * 
- * @param {string} sheetName - Name of the sheet
- * @param {Object} criteria - Object with search criteria (e.g., {Name: 'John', Active: true})
- * @return {Array} Array of objects matching the criteria
- */
-function findRowsInSheet(sheetName, criteria) {
-  const allData = getDataFromSheet(sheetName);
-  
-  return allData.filter(row => {
+  return data.filter(row => {
     for (const key in criteria) {
       if (row[key] !== criteria[key]) {
         return false;
@@ -127,86 +275,372 @@ function findRowsInSheet(sheetName, criteria) {
 }
 
 /**
- * Find a single row by ID
+ * Get a specific row from a sheet by ID
  * 
- * @param {string} sheetName - Name of the sheet
- * @param {string} idValue - Value of the ID to search for
- * @return {Object|null} Row object or null if not found
+ * @param {string} sheetName - The name of the sheet to get data from
+ * @param {string} id - The ID value to look for in the ID column
+ * @return {Object} The row object, or null if not found
  */
-function findRowById(sheetName, idValue) {
-  const sheet = spreadsheet.getSheetByName(sheetName);
-  if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found`);
+function getRowById(sheetName, id) {
+  const data = getDataFromSheet(sheetName);
+  return data.find(row => row.ID === id) || null;
+}
+
+/**
+ * Add a row to a sheet
+ * 
+ * @param {string} sheetName - The name of the sheet to add data to
+ * @param {Object} rowData - Object with column names as keys and values to add
+ * @return {boolean} True if successful, false otherwise
+ */
+function addRowToSheet(sheetName, rowData) {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      Logger.log(`Sheet not found: ${sheetName}`);
+      return false;
+    }
+    
+    // Get headers
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    // Create row
+    const row = [];
+    headers.forEach(header => {
+      row.push(rowData[header] !== undefined ? rowData[header] : '');
+    });
+    
+    // Add row to sheet
+    sheet.appendRow(row);
+    
+    return true;
+  } catch (error) {
+    Logger.log(`Error in addRowToSheet: ${error.message}`);
+    return false;
   }
-  
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const idColumnIndex = headers.indexOf('ID');
-  
-  if (idColumnIndex === -1) {
-    throw new Error(`ID column not found in sheet "${sheetName}"`);
-  }
-  
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][idColumnIndex] == idValue) {
-      const result = {};
-      for (let j = 0; j < headers.length; j++) {
-        result[headers[j]] = data[i][j];
+}
+
+/**
+ * Update a row in a sheet
+ * 
+ * @param {string} sheetName - The name of the sheet to update data in
+ * @param {string} id - The ID value to look for in the ID column
+ * @param {Object} updateData - Object with column names as keys and values to update
+ * @return {boolean} True if successful, false otherwise
+ */
+function updateRowInSheet(sheetName, id, updateData) {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      Logger.log(`Sheet not found: ${sheetName}`);
+      return false;
+    }
+    
+    // Find the row with the given ID
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    let idColumnIndex = -1;
+    for (let i = 0; i < headers.length; i++) {
+      if (headers[i] === 'ID') {
+        idColumnIndex = i;
+        break;
       }
-      result.rowIndex = i + 1; // Store the row index for later use
-      return result;
     }
+    
+    if (idColumnIndex === -1) {
+      Logger.log('ID column not found');
+      return false;
+    }
+    
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idColumnIndex] === id) {
+        rowIndex = i + 1; // +1 because getValues() is 0-indexed, but sheet is 1-indexed
+        break;
+      }
+    }
+    
+    if (rowIndex === -1) {
+      Logger.log(`Row with ID ${id} not found`);
+      return false;
+    }
+    
+    // Update values
+    for (const key in updateData) {
+      const columnIndex = headers.indexOf(key);
+      if (columnIndex !== -1) {
+        sheet.getRange(rowIndex, columnIndex + 1).setValue(updateData[key]);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    Logger.log(`Error in updateRowInSheet: ${error.message}`);
+    return false;
   }
-  
-  return null;
 }
 
 /**
- * Generate a unique ID
+ * Delete a row from a sheet
  * 
- * @return {string} Unique ID
+ * @param {string} sheetName - The name of the sheet to delete data from
+ * @param {string} id - The ID value to look for in the ID column
+ * @return {boolean} True if successful, false otherwise
  */
-function generateUniqueId() {
-  return Utilities.getUuid();
+function deleteRowFromSheet(sheetName, id) {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      Logger.log(`Sheet not found: ${sheetName}`);
+      return false;
+    }
+    
+    // Find the row with the given ID
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    let idColumnIndex = -1;
+    for (let i = 0; i < headers.length; i++) {
+      if (headers[i] === 'ID') {
+        idColumnIndex = i;
+        break;
+      }
+    }
+    
+    if (idColumnIndex === -1) {
+      Logger.log('ID column not found');
+      return false;
+    }
+    
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idColumnIndex] === id) {
+        rowIndex = i + 1; // +1 because getValues() is 0-indexed, but sheet is 1-indexed
+        break;
+      }
+    }
+    
+    if (rowIndex === -1) {
+      Logger.log(`Row with ID ${id} not found`);
+      return false;
+    }
+    
+    // Delete the row
+    sheet.deleteRow(rowIndex);
+    
+    return true;
+  } catch (error) {
+    Logger.log(`Error in deleteRowFromSheet: ${error.message}`);
+    return false;
+  }
 }
 
 /**
- * Get a setting value from the settings sheet
+ * Get a setting value
  * 
- * @param {string} settingName - Name of the setting
- * @param {any} defaultValue - Default value to return if setting not found
- * @return {string} Setting value
+ * @param {string} key - The setting key
+ * @param {string} defaultValue - Default value if the setting is not found
+ * @return {string} The setting value or default value
  */
-function getSetting(settingName, defaultValue) {
-  const settingsSheet = spreadsheet.getSheetByName(SHEET_NAMES.SETTINGS);
-  const data = settingsSheet.getDataRange().getValues();
-  
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === settingName) {
-      return data[i][1];
+function getSetting(key, defaultValue = '') {
+  try {
+    // Check if settings sheet exists
+    if (!sheetExists(SHEET_NAMES.SETTINGS)) {
+      return defaultValue;
     }
+    
+    const settings = getDataFromSheet(SHEET_NAMES.SETTINGS);
+    const setting = settings.find(s => s.Key === key);
+    
+    return setting ? setting.Value : defaultValue;
+  } catch (error) {
+    Logger.log(`Error in getSetting: ${error.message}`);
+    return defaultValue;
   }
-  
-  return defaultValue;
 }
 
 /**
- * Update a setting value
+ * Set a setting value
  * 
- * @param {string} settingName - Name of the setting
- * @param {string} value - New value
+ * @param {string} key - The setting key
+ * @param {string} value - The setting value
+ * @param {string} description - The setting description (only used for new settings)
+ * @return {boolean} True if successful, false otherwise
  */
-function updateSetting(settingName, value) {
-  const settingsSheet = spreadsheet.getSheetByName(SHEET_NAMES.SETTINGS);
-  const data = settingsSheet.getDataRange().getValues();
-  
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === settingName) {
-      settingsSheet.getRange(i + 1, 2).setValue(value);
-      return;
+function setSetting(key, value, description = '') {
+  try {
+    // Check if settings sheet exists
+    if (!sheetExists(SHEET_NAMES.SETTINGS)) {
+      return false;
     }
+    
+    const settings = getDataFromSheet(SHEET_NAMES.SETTINGS);
+    const setting = settings.find(s => s.Key === key);
+    
+    if (setting) {
+      // Update existing setting
+      return updateRowInSheet(SHEET_NAMES.SETTINGS, setting.Key, { Value: value });
+    } else {
+      // Add new setting
+      return addRowToSheet(SHEET_NAMES.SETTINGS, {
+        Key: key,
+        Value: value,
+        Description: description
+      });
+    }
+  } catch (error) {
+    Logger.log(`Error in setSetting: ${error.message}`);
+    return false;
   }
-  
-  // If setting doesn't exist, add it
-  settingsSheet.appendRow([settingName, value, '']);
+}
+
+/**
+ * Get all settings
+ * 
+ * @return {Object} Object with setting keys as properties and values as values
+ */
+function getSettings() {
+  try {
+    // Check if settings sheet exists
+    if (!sheetExists(SHEET_NAMES.SETTINGS)) {
+      return {};
+    }
+    
+    const settingsData = getDataFromSheet(SHEET_NAMES.SETTINGS);
+    const settings = {};
+    
+    settingsData.forEach(setting => {
+      settings[setting.Key] = setting.Value;
+    });
+    
+    return settings;
+  } catch (error) {
+    Logger.log(`Error in getSettings: ${error.message}`);
+    return {};
+  }
+}
+
+/**
+ * Log an action to the logs sheet
+ * 
+ * @param {string} user - The user who performed the action
+ * @param {string} action - The action performed
+ * @param {string} details - Details about the action
+ * @return {boolean} True if successful, false otherwise
+ */
+function logAction(user, action, details) {
+  try {
+    // Check if logs sheet exists
+    if (!sheetExists(SHEET_NAMES.LOGS)) {
+      return false;
+    }
+    
+    // Add log entry
+    return addRowToSheet(SHEET_NAMES.LOGS, {
+      Timestamp: new Date(),
+      User: user,
+      Action: action,
+      Details: details
+    });
+  } catch (error) {
+    Logger.log(`Error in logAction: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Get recent logs
+ * 
+ * @param {number} limit - Maximum number of logs to return
+ * @return {Array} Array of log objects
+ */
+function getRecentLogs(limit = 100) {
+  try {
+    // Check if logs sheet exists
+    if (!sheetExists(SHEET_NAMES.LOGS)) {
+      return [];
+    }
+    
+    const logs = getDataFromSheet(SHEET_NAMES.LOGS);
+    
+    // Sort by timestamp in descending order
+    logs.sort((a, b) => {
+      const timeA = a.Timestamp instanceof Date ? a.Timestamp : new Date(a.Timestamp);
+      const timeB = b.Timestamp instanceof Date ? b.Timestamp : new Date(b.Timestamp);
+      return timeB - timeA;
+    });
+    
+    // Return limited number of logs
+    return logs.slice(0, limit);
+  } catch (error) {
+    Logger.log(`Error in getRecentLogs: ${error.message}`);
+    return [];
+  }
+}
+
+/**
+ * Clean up old logs
+ * 
+ * @param {number} daysToKeep - Number of days of logs to keep
+ * @return {number} Number of logs deleted
+ */
+function cleanupOldLogs(daysToKeep = 90) {
+  try {
+    // Check if logs sheet exists
+    if (!sheetExists(SHEET_NAMES.LOGS)) {
+      return 0;
+    }
+    
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = spreadsheet.getSheetByName(SHEET_NAMES.LOGS);
+    
+    // Get all logs
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    let timestampColumnIndex = -1;
+    for (let i = 0; i < headers.length; i++) {
+      if (headers[i] === 'Timestamp') {
+        timestampColumnIndex = i;
+        break;
+      }
+    }
+    
+    if (timestampColumnIndex === -1 || data.length <= 1) {
+      Logger.log('Timestamp column not found or no logs exist');
+      return 0;
+    }
+    
+    // Calculate cutoff date
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+    
+    // Find rows to delete
+    const rowsToDelete = [];
+    for (let i = 1; i < data.length; i++) {
+      const timestamp = data[i][timestampColumnIndex];
+      const logDate = timestamp instanceof Date ? timestamp : new Date(timestamp);
+      
+      if (logDate < cutoffDate) {
+        rowsToDelete.push(i + 1); // +1 because getValues() is 0-indexed, but sheet is 1-indexed
+      }
+    }
+    
+    // Delete rows (in reverse order to avoid shifting issues)
+    for (let i = rowsToDelete.length - 1; i >= 0; i--) {
+      sheet.deleteRow(rowsToDelete[i]);
+    }
+    
+    return rowsToDelete.length;
+  } catch (error) {
+    Logger.log(`Error in cleanupOldLogs: ${error.message}`);
+    return 0;
+  }
 }
