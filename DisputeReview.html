@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('UI/styles'); ?>
+  </head>
+  <body>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Dispute Review</h2>
+        <button id="closeBtn" class="secondary">
+          <i class="material-icons">close</i> Close
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Dispute List (Step 1) -->
+        <div id="disputeListStep" class="step active">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Pending Disputes</h3>
+              <div class="flex items-center gap-8">
+                <input type="text" id="disputeFilter" placeholder="Filter disputes..." style="width: 200px; margin-bottom: 0;">
+                <select id="statusFilter" style="width: 150px; margin-bottom: 0;">
+                  <option value="all">All Statuses</option>
+                  <option value="pending" selected>Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+              <table id="disputesTable">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Agent</th>
+                    <th>Submitted By</th>
+                    <th>Date</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="disputesTableBody">
+                  <tr>
+                    <td colspan="7" class="text-center">Loading disputes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Dispute Details (Step 2) -->
+        <div id="disputeDetailsStep" class="step">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Dispute Details</h3>
+              <span id="disputeStatus" class="status-badge status-pending">Pending</span>
+            </div>
+            
+            <div class="mb-16">
+              <div class="flex justify-between mb-8">
+                <strong>Dispute ID:</strong>
+                <span id="disputeId"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Submitted By:</strong>
+                <span id="submittedBy"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Submission Date:</strong>
+                <span id="submissionDate"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Reason:</strong>
+                <span id="disputeReason"></span>
+              </div>
+            </div>
+            
+            <div class="card bg-light mb-16">
+              <h4>Dispute Details</h4>
+              <p id="disputeDetails"></p>
+              
+              <h4>Additional Evidence</h4>
+              <p id="additionalEvidence"></p>
+              
+              <h4>Requested Score Change</h4>
+              <p id="requestedScore"></p>
+            </div>
+            
+            <div class="card mb-16">
+              <h4>Evaluation Information</h4>
+              <div class="flex justify-between mb-8">
+                <strong>Agent:</strong>
+                <span id="agentName"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Evaluator:</strong>
+                <span id="evaluatorName"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Evaluation Date:</strong>
+                <span id="evaluationDate"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Original Score:</strong>
+                <span id="originalScore"></span>
+              </div>
+            </div>
+            
+            <div class="card mb-16">
+              <h4>Disputed Questions</h4>
+              <div id="disputedQuestions">
+                <!-- Disputed questions will be populated here -->
+              </div>
+            </div>
+            
+            <div id="reviewForm" class="card">
+              <h4>Review Decision</h4>
+              <form id="disputeReviewForm">
+                <input type="hidden" id="reviewDisputeId" name="disputeId">
+                
+                <div class="mb-16">
+                  <label for="reviewStatus">Decision:</label>
+                  <select id="reviewStatus" name="status" required>
+                    <option value="" disabled selected>-- Select decision --</option>
+                    <option value="approved">Approve (Accept Dispute)</option>
+                    <option value="partially_approved">Partially Approve</option>
+                    <option value="rejected">Reject (Deny Dispute)</option>
+                  </select>
+                </div>
+                
+                <div id="questionDecisionsContainer" class="mb-16" style="display: none;">
+                  <h5>Question Decisions</h5>
+                  <div id="questionDecisions">
+                    <!-- Question decisions will be populated here -->
+                  </div>
+                </div>
+                
+                <div class="mb-16">
+                  <label for="reviewNotes">Review Notes:</label>
+                  <textarea id="reviewNotes" name="notes" rows="4" placeholder="Provide detailed notes explaining your decision..." required></textarea>
+                </div>
+                
+                <div class="mb-16">
+                  <label for="scoreAdjustment">Score Adjustment:</label>
+                  <input type="text" id="scoreAdjustment" name="scoreAdjustment" placeholder="e.g. +5, -2, or leave blank for no change">
+                  <p class="helper-text">Enter a positive or negative adjustment, or leave blank if not applicable</p>
+                </div>
+                
+                <div class="mb-16">
+                  <div class="flex items-center gap-8">
+                    <input type="checkbox" id="notifyAgent" name="notifyAgent" checked>
+                    <label for="notifyAgent" style="margin-bottom: 0;">Notify Agent</label>
+                  </div>
+                  <div class="flex items-center gap-8">
+                    <input type="checkbox" id="notifyManager" name="notifyManager" checked>
+                    <label for="notifyManager" style="margin-bottom: 0;">Notify Manager</label>
+                  </div>
+                  <div class="flex items-center gap-8">
+                    <input type="checkbox" id="notifyEvaluator" name="notifyEvaluator" checked>
+                    <label for="notifyEvaluator" style="margin-bottom: 0;">Notify Evaluator</label>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Confirmation (Step 3) -->
+        <div id="confirmationStep" class="step">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Review Submitted</h3>
+            </div>
+            
+            <div class="text-center mb-16">
+              <i class="material-icons" style="font-size: 48px; color: #4285F4; margin: 24px 0;">check_circle</i>
+              <h3>Your review has been submitted successfully!</h3>
+              <p>Dispute ID: <span id="confirmedDisputeId"></span></p>
+              <p>Decision: <span id="confirmedDecision"></span></p>
+            </div>
+            
+            <div class="card bg-light">
+              <h4>Review Summary</h4>
+              <div class="flex justify-between mb-8">
+                <strong>Original Score:</strong>
+                <span id="confirmedOriginalScore"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Adjusted Score:</strong>
+                <span id="confirmedAdjustedScore"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Notes:</strong>
+                <span id="confirmedNotes"></span>
+              </div>
+              <div class="flex justify-between mb-8">
+                <strong>Notifications Sent To:</strong>
+                <span id="confirmedNotifications"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button id="backBtn" class="secondary" style="display: none;">
+          <i class="material-icons">arrow_back</i> Back
+        </button>
+        <button id="submitReviewBtn" class="primary" style="display: none;">
+          <i class="material-icons">save</i> Submit Review
+        </button>
+        <button id="doneBtn" class="primary" style="display: none;">
+          <i class="material-icons">check</i> Done
+        </button>
+        <button id="cancelBtn" class="secondary">Cancel</button>
+      </div>
+    </div>
+    
+    <?!= include('UI/scripts'); ?>
+    <script>
+      // Variables to store the current state
+      let currentStep = 1;
+      let totalSteps = 3;
+      let selectedDispute = null;
+      let disputes = [];
+      let disputedQuestions = [];
+      
+      // Initialize the form when the page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        // Set up event listeners
+        document.getElementById('closeBtn').addEventListener('click', closeDialog);
+        document.getElementById('cancelBtn').addEventListener('click', closeDialog);
+        document.getElementById('backBtn').addEventListener('click', goToPreviousStep);
+        document.getElementById('submitReviewBtn').addEventListener('click', submitReview);
+        document.getElementById('doneBtn').addEventListener('click', closeDialog);
+        document.getElementById('disputeFilter').addEventListener('keyup', filterDisputes);
+        document.getElementById('statusFilter').addEventListener('change', filterDisputes);
+        document.getElementById('reviewStatus').addEventListener('change', handleReviewStatusChange);
+        
+        // Load disputes
+        loadDisputes();
+        
+        // Set up the initial UI state
+        updateNavigationButtons();
+      });
+      
+      function loadDisputes() {
+        showNotification('Loading disputes...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(populateDisputesTable)
+          .withFailureHandler(handleError)
+          .getDisputesForReview();
+      }
+      
+      function populateDisputesTable(data) {
+        disputes = data;
+        
+        if (!disputes || disputes.length === 0) {
+          document.getElementById('disputesTableBody').innerHTML = 
+            '<tr><td colspan="7" class="text-center">No disputes available for review</td></tr>';
+          return;
+        }
+        
+        renderDisputesTable(disputes);
+        
+        // Apply the initial filter (pending disputes)
+        filterDisputes();
+        
+        // Set up click handlers after rendering the table
+        setupViewButtons();
+      }
+      
+      function renderDisputesTable(disputes) {
+        const tableBody = document.getElementById('disputesTableBody');
+        tableBody.innerHTML = '';
+        
+        disputes.forEach(dispute => {
+          const row = document.createElement('tr');
+          
+          // ID column
+          const idCell = document.createElement('td');
+          idCell.textContent = dispute.ID.substring(0, 8) + '...';
+          idCell.title = dispute.ID;
+          row.appendChild(idCell);
+          
+          // Agent column
+          const agentCell = document.createElement('td');
+          agentCell.textContent = dispute.Agent;
+          row.appendChild(agentCell);
+          
+          // Submitted By column
+          const submittedByCell = document.createElement('td');
+          submittedByCell.textContent = dispute['Submitted By'];
+          row.appendChild(submittedByCell);
+          
+          // Date column
+          const dateCell = document.createElement('td');
+          dateCell.textContent = formatDate(dispute['Submission Date']);
+          row.appendChild(dateCell);
+          
+          // Reason column
+          const reasonCell = document.createElement('td');
+          reasonCell.textContent = dispute.Reason;
+          row.appendChild(reasonCell);
+          
+          // Status column
+          const statusCell = document.createElement('td');
+          statusCell.innerHTML = createStatusBadge(dispute.Status);
+          row.appendChild(statusCell);
+          
+          // Actions column
+          const actionsCell = document.createElement('td');
+          const viewBtn = document.createElement('button');
+          viewBtn.className = 'primary btn-sm';
+          viewBtn.innerHTML = '<i class="material-icons">visibility</i> Review';
+          viewBtn.dataset.id = dispute.ID;
+          actionsCell.appendChild(viewBtn);
+          row.appendChild(actionsCell);
+          
+          // Add data attribute for filtering
+          row.dataset.status = dispute.Status.toLowerCase();
+          
+          tableBody.appendChild(row);
+        });
+      }
+      
+      function setupViewButtons() {
+        document.querySelectorAll('button[data-id]').forEach(button => {
+          button.addEventListener('click', function() {
+            const id = this.dataset.id;
+            selectDispute(id);
+          });
+        });
+      }
+      
+      function filterDisputes() {
+        const filterText = document.getElementById('disputeFilter').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        
+        const rows = document.querySelectorAll('#disputesTableBody tr');
+        
+        rows.forEach(row => {
+          const textContent = row.textContent.toLowerCase();
+          const rowStatus = row.dataset.status;
+          
+          // Skip the "no disputes" row
+          if (row.cells.length === 1) return;
+          
+          // Check if the row matches both filters
+          const matchesText = !filterText || textContent.includes(filterText);
+          const matchesStatus = statusFilter === 'all' || rowStatus === statusFilter;
+          
+          // Show/hide the row based on the filter matches
+          row.style.display = matchesText && matchesStatus ? '' : 'none';
+        });
+      }
+      
+      function selectDispute(id) {
+        selectedDispute = disputes.find(d => d.ID === id);
+        
+        if (!selectedDispute) {
+          showNotification('Error: Dispute not found', 'error');
+          return;
+        }
+        
+        // Load dispute details from the server
+        showNotification('Loading dispute details...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(populateDisputeDetails)
+          .withFailureHandler(handleError)
+          .getDisputeDetails(id);
+      }
+      
+      function populateDisputeDetails(data) {
+        if (!data) {
+          showNotification('Error: Unable to load dispute details', 'error');
+          return;
+        }
+        
+        // Update the global dispute details
+        selectedDispute = {...selectedDispute, ...data.dispute};
+        disputedQuestions = data.questions || [];
+        
+        // Populate the dispute details form
+        document.getElementById('disputeId').textContent = selectedDispute.ID;
+        document.getElementById('submittedBy').textContent = selectedDispute['Submitted By'];
+        document.getElementById('submissionDate').textContent = formatDate(selectedDispute['Submission Date']);
+        document.getElementById('disputeReason').textContent = selectedDispute.Reason;
+        document.getElementById('disputeDetails').textContent = selectedDispute.Details || 'No details provided';
+        document.getElementById('additionalEvidence').textContent = selectedDispute['Additional Evidence'] || 'None';
+        document.getElementById('requestedScore').textContent = selectedDispute['Requested Score Change'] || 'None';
+        
+        // Set up dispute status indicator
+        document.getElementById('disputeStatus').textContent = selectedDispute.Status;
+        document.getElementById('disputeStatus').className = 'status-badge status-' + selectedDispute.Status.toLowerCase();
+        
+        // Populate evaluation details
+        document.getElementById('agentName').textContent = selectedDispute.Agent;
+        document.getElementById('evaluatorName').textContent = selectedDispute.Evaluator;
+        document.getElementById('evaluationDate').textContent = formatDate(selectedDispute['Evaluation Date']);
+        
+        const score = parseInt(selectedDispute['Original Score']);
+        const maxPossible = parseInt(selectedDispute['Max Possible']);
+        const scorePercentage = (score / maxPossible) * 100;
+        document.getElementById('originalScore').textContent = 
+          `${score}/${maxPossible} (${scorePercentage.toFixed(1)}%)`;
+        
+        // Populate disputed questions
+        const disputedQuestionsContainer = document.getElementById('disputedQuestions');
+        disputedQuestionsContainer.innerHTML = '';
+        
+        if (disputedQuestions.length === 0) {
+          disputedQuestionsContainer.innerHTML = '<p class="text-center">All questions in the evaluation are disputed</p>';
+        } else {
+          disputedQuestions.forEach((question, index) => {
+            const questionElement = document.createElement('div');
+            questionElement.className = 'question-item mb-16 p-8 border-bottom';
+            
+            const header = document.createElement('div');
+            header.className = 'flex justify-between mb-8';
+            
+            const title = document.createElement('div');
+            title.className = 'font-weight-bold';
+            title.textContent = `Question ${index + 1}: ${question.text}`;
+            
+            const score = document.createElement('div');
+            score.textContent = `Original Score: ${question.score === 'NA' ? 'N/A' : question.score}`;
+            
+            header.appendChild(title);
+            header.appendChild(score);
+            questionElement.appendChild(header);
+            
+            const comments = document.createElement('div');
+            comments.className = 'mb-8';
+            comments.innerHTML = `<strong>Comments:</strong> ${question.comments || 'None'}`;
+            questionElement.appendChild(comments);
+            
+            disputedQuestionsContainer.appendChild(questionElement);
+          });
+        }
+        
+        // Set up the review form
+        document.getElementById('reviewDisputeId').value = selectedDispute.ID;
+        document.getElementById('reviewForm').style.display = selectedDispute.Status === 'Pending' ? 'block' : 'none';
+        document.getElementById('submitReviewBtn').style.display = selectedDispute.Status === 'Pending' ? 'inline-flex' : 'none';
+        
+        // If dispute is already reviewed, show the decision
+        if (selectedDispute.Status !== 'Pending') {
+          const decisionNote = document.createElement('div');
+          decisionNote.className = 'card bg-light';
+          decisionNote.innerHTML = `
+            <h4>Review Decision</h4>
+            <p><strong>Decision:</strong> ${selectedDispute.Status}</p>
+            <p><strong>Notes:</strong> ${selectedDispute['Review Notes'] || 'None'}</p>
+            <p><strong>Score Adjustment:</strong> ${selectedDispute['Score Adjustment'] || 'None'}</p>
+            <p><strong>Reviewed By:</strong> ${selectedDispute['Reviewed By'] || 'Unknown'}</p>
+            <p><strong>Review Date:</strong> ${formatDate(selectedDispute['Review Date']) || 'Unknown'}</p>
+          `;
+          document.getElementById('reviewForm').insertAdjacentElement('beforebegin', decisionNote);
+        }
+        
+        // Go to the next step
+        goToNextStep();
+      }
+      
+      function handleReviewStatusChange() {
+        const status = document.getElementById('reviewStatus').value;
+        const questionsContainer = document.getElementById('questionDecisionsContainer');
+        
+        // Show question-by-question decisions only for partial approval
+        if (status === 'partially_approved') {
+          questionsContainer.style.display = 'block';
+          populateQuestionDecisions();
+        } else {
+          questionsContainer.style.display = 'none';
+        }
+      }
+      
+      function populateQuestionDecisions() {
+        const container = document.getElementById('questionDecisions');
+        container.innerHTML = '';
+        
+        // If no specific questions are disputed, show a decision for the entire evaluation
+        if (disputedQuestions.length === 0) {
+          container.innerHTML = '<p>This dispute is for the entire evaluation. Please provide your overall decision using the options above.</p>';
+          return;
+        }
+        
+        // Create decision elements for each disputed question
+        disputedQuestions.forEach((question, index) => {
+          const decisionElement = document.createElement('div');
+          decisionElement.className = 'mb-16 p-8 border-bottom';
+          
+          const header = document.createElement('div');
+          header.className = 'mb-8';
+          header.innerHTML = `<strong>Question ${index + 1}:</strong> ${question.text}`;
+          
+          const decisionSelect = document.createElement('select');
+          decisionSelect.className = 'w-full';
+          decisionSelect.name = `question_decision_${question.id}`;
+          decisionSelect.required = true;
+          
+          // Add decision options
+          const options = [
+            { value: '', text: '-- Select decision --', disabled: true, selected: true },
+            { value: 'approved', text: 'Approve (Accept dispute for this question)' },
+            { value: 'rejected', text: 'Reject (Deny dispute for this question)' }
+          ];
+          
+          options.forEach(option => {
+            const optElement = document.createElement('option');
+            optElement.value = option.value;
+            optElement.textContent = option.text;
+            optElement.disabled = option.disabled || false;
+            optElement.selected = option.selected || false;
+            decisionSelect.appendChild(optElement);
+          });
+          
+          const scoreInput = document.createElement('div');
+          scoreInput.className = 'mt-8';
+          scoreInput.innerHTML = `
+            <label for="question_score_${question.id}">Revised Score:</label>
+            <input type="text" id="question_score_${question.id}" name="question_score_${question.id}" 
+              placeholder="Enter new score or leave blank to keep original score: ${question.score}">
+          `;
+          
+          decisionElement.appendChild(header);
+          decisionElement.appendChild(decisionSelect);
+          decisionElement.appendChild(scoreInput);
+          
+          container.appendChild(decisionElement);
+        });
+      }
+      
+      function goToNextStep() {
+        if (currentStep < totalSteps) {
+          // Hide current step
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.remove('active');
+          
+          // Show next step
+          currentStep++;
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.add('active');
+          
+          // Update navigation buttons
+          updateNavigationButtons();
+        }
+      }
+      
+      function goToPreviousStep() {
+        if (currentStep > 1) {
+          // Hide current step
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.remove('active');
+          
+          // Show previous step
+          currentStep--;
+          document.querySelector(`.step:nth-child(${currentStep})`).classList.add('active');
+          
+          // Update navigation buttons
+          updateNavigationButtons();
+        }
+      }
+      
+      function updateNavigationButtons() {
+        // Update back button
+        const backBtn = document.getElementById('backBtn');
+        backBtn.style.display = currentStep > 1 && currentStep < totalSteps ? 'inline-flex' : 'none';
+        
+        // Update submit review button
+        const submitReviewBtn = document.getElementById('submitReviewBtn');
+        submitReviewBtn.style.display = currentStep === 2 && 
+                                        selectedDispute && 
+                                        selectedDispute.Status === 'Pending' ? 'inline-flex' : 'none';
+        
+        // Update done button
+        const doneBtn = document.getElementById('doneBtn');
+        doneBtn.style.display = currentStep === 3 ? 'inline-flex' : 'none';
+        
+        // Update cancel button
+        const cancelBtn = document.getElementById('cancelBtn');
+        cancelBtn.style.display = currentStep === 3 ? 'none' : 'inline-flex';
+      }
+      
+      function validateReviewForm() {
+        const form = document.getElementById('disputeReviewForm');
+        
+        // Check if form is valid
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return false;
+        }
+        
+        const status = document.getElementById('reviewStatus').value;
+        
+        // For partial approval, check if all question decisions are made
+        if (status === 'partially_approved' && disputedQuestions.length > 0) {
+          let allQuestionsDecided = true;
+          
+          disputedQuestions.forEach(question => {
+            const decisionSelect = document.querySelector(`select[name="question_decision_${question.id}"]`);
+            if (!decisionSelect || !decisionSelect.value) {
+              allQuestionsDecided = false;
+            }
+          });
+          
+          if (!allQuestionsDecided) {
+            showNotification('Please provide a decision for all disputed questions', 'warning');
+            return false;
+          }
+        }
+        
+        return true;
+      }
+      
+      function submitReview() {
+        if (!validateReviewForm()) return;
+        
+        showNotification('Submitting review...', 'info');
+        
+        // Collect form data
+        const formData = {
+          disputeId: document.getElementById('reviewDisputeId').value,
+          status: document.getElementById('reviewStatus').value,
+          notes: document.getElementById('reviewNotes').value,
+          scoreAdjustment: document.getElementById('scoreAdjustment').value,
+          notifyAgent: document.getElementById('notifyAgent').checked,
+          notifyManager: document.getElementById('notifyManager').checked,
+          notifyEvaluator: document.getElementById('notifyEvaluator').checked,
+          questionDecisions: {}
+        };
+        
+        // Collect question decisions for partial approval
+        if (formData.status === 'partially_approved' && disputedQuestions.length > 0) {
+          disputedQuestions.forEach(question => {
+            const decisionSelect = document.querySelector(`select[name="question_decision_${question.id}"]`);
+            const scoreInput = document.querySelector(`input[name="question_score_${question.id}"]`);
+            
+            if (decisionSelect && decisionSelect.value) {
+              formData.questionDecisions[question.id] = {
+                decision: decisionSelect.value,
+                newScore: scoreInput ? scoreInput.value : null
+              };
+            }
+          });
+        }
+        
+        google.script.run
+          .withSuccessHandler(onReviewSubmitted)
+          .withFailureHandler(handleError)
+          .submitDisputeReview(formData);
+      }
+      
+      function onReviewSubmitted(result) {
+        if (result.success) {
+          // Update the confirmation screen
+          document.getElementById('confirmedDisputeId').textContent = selectedDispute.ID;
+          document.getElementById('confirmedDecision').textContent = document.getElementById('reviewStatus').value;
+          document.getElementById('confirmedOriginalScore').textContent = document.getElementById('originalScore').textContent;
+          
+          // Calculate adjusted score if provided
+          const scoreAdjustment = document.getElementById('scoreAdjustment').value;
+          let adjustedScore = 'No change';
+          
+          if (scoreAdjustment) {
+            const originalScore = parseInt(selectedDispute['Original Score']);
+            const adjustment = parseInt(scoreAdjustment);
+            const maxPossible = parseInt(selectedDispute['Max Possible']);
+            const newScore = originalScore + adjustment;
+            const newPercentage = (newScore / maxPossible) * 100;
+            
+            adjustedScore = `${newScore}/${maxPossible} (${newPercentage.toFixed(1)}%)`;
+          }
+          
+          document.getElementById('confirmedAdjustedScore').textContent = adjustedScore;
+          document.getElementById('confirmedNotes').textContent = document.getElementById('reviewNotes').value;
+          
+          // Show notification recipients
+          const notifications = [];
+          if (document.getElementById('notifyAgent').checked) notifications.push('Agent');
+          if (document.getElementById('notifyManager').checked) notifications.push('Manager');
+          if (document.getElementById('notifyEvaluator').checked) notifications.push('Evaluator');
+          
+          document.getElementById('confirmedNotifications').textContent = notifications.join(', ') || 'None';
+          
+          // Go to confirmation step
+          goToNextStep();
+          
+          showNotification('Review submitted successfully', 'success');
+        } else {
+          showNotification('Error submitting review: ' + result.message, 'error');
+        }
+      }
+      
+      function handleError(error) {
+        console.error('Error:', error);
+        showNotification('Error: ' + error.message, 'error');
+      }
+      
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
