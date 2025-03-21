@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('UI/styles'); ?>
+  </head>
+  <body>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>User Management</h2>
+        <button id="closeBtn" class="secondary">
+          <i class="material-icons">close</i> Close
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Users</h3>
+            <div class="flex gap-8">
+              <input type="text" id="userFilter" placeholder="Filter users..." style="width: 200px; margin-bottom: 0;">
+              <button id="addUserBtn" class="primary">
+                <i class="material-icons">person_add</i> Add User
+              </button>
+            </div>
+          </div>
+          
+          <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+            <table id="usersTable">
+              <thead>
+                <tr>
+                  <th data-sortable data-column="name" data-type="string">Name</th>
+                  <th data-sortable data-column="email" data-type="string">Email</th>
+                  <th data-sortable data-column="role" data-type="string">Role</th>
+                  <th data-sortable data-column="department" data-type="string">Department</th>
+                  <th data-sortable data-column="manager" data-type="string">Manager</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr>
+                  <td colspan="6" class="text-center">Loading users...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Add/Edit User Modal -->
+      <div id="userModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="background: white; width: 500px; max-width: 90%; margin: 40px auto; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);">
+          <div class="modal-header">
+            <h3 id="userModalTitle">Add User</h3>
+            <button id="closeModalBtn" class="secondary" style="padding: 4px; min-width: 0; width: 32px; height: 32px;">
+              <i class="material-icons">close</i>
+            </button>
+          </div>
+          
+          <div style="padding: 16px;">
+            <form id="userForm">
+              <input type="hidden" id="userId" name="userId">
+              
+              <div class="mb-16">
+                <label for="userName">Name:</label>
+                <input type="text" id="userName" name="name" required>
+              </div>
+              
+              <div class="mb-16">
+                <label for="userEmail">Email:</label>
+                <input type="email" id="userEmail" name="email" required>
+              </div>
+              
+              <div class="mb-16">
+                <label for="userRole">Role:</label>
+                <select id="userRole" name="role" required>
+                  <option value="" disabled selected>-- Select role --</option>
+                  <option value="<?= USER_ROLES.AGENT ?>">Agent</option>
+                  <option value="<?= USER_ROLES.AGENT_MANAGER ?>">Agent Manager</option>
+                  <option value="<?= USER_ROLES.QA_ANALYST ?>">QA Analyst</option>
+                  <option value="<?= USER_ROLES.QA_MANAGER ?>">QA Manager</option>
+                  <option value="<?= USER_ROLES.ADMIN ?>">Admin</option>
+                </select>
+              </div>
+              
+              <div class="mb-16">
+                <label for="userDepartment">Department:</label>
+                <select id="userDepartment" name="department" required>
+                  <option value="" disabled selected>-- Select department --</option>
+                  <option value="Sales">Sales</option>
+                  <option value="Support">Support</option>
+                  <option value="Technical Support">Technical Support</option>
+                  <option value="Customer Service">Customer Service</option>
+                  <option value="Quality Assurance">Quality Assurance</option>
+                  <option value="Management">Management</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              
+              <div class="mb-16">
+                <label for="userManager">Manager:</label>
+                <select id="userManager" name="manager">
+                  <option value="">-- None --</option>
+                  <!-- Will be populated with managers -->
+                </select>
+              </div>
+              
+              <div class="mb-16">
+                <label for="userNotes">Notes:</label>
+                <textarea id="userNotes" name="notes" rows="3"></textarea>
+              </div>
+              
+              <div class="modal-footer">
+                <button type="button" id="cancelUserBtn" class="secondary">Cancel</button>
+                <button type="submit" id="saveUserBtn" class="primary">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <?!= include('UI/scripts'); ?>
+    <script>
+      // Initialize the user management page
+      document.addEventListener('DOMContentLoaded', function() {
+        // Set up event listeners
+        document.getElementById('closeBtn').addEventListener('click', closeDialog);
+        document.getElementById('userFilter').addEventListener('keyup', filterUsers);
+        document.getElementById('addUserBtn').addEventListener('click', showAddUserModal);
+        document.getElementById('closeModalBtn').addEventListener('click', hideUserModal);
+        document.getElementById('cancelUserBtn').addEventListener('click', hideUserModal);
+        document.getElementById('userForm').addEventListener('submit', saveUser);
+        
+        // Load users
+        loadUsers();
+        
+        // Set up sortable table
+        setupSortableTable('usersTable');
+      });
+      
+      // Variables to store users data
+      let users = [];
+      let managers = [];
+      let isEditMode = false;
+      
+      function loadUsers() {
+        showNotification('Loading users...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(populateUsersTable)
+          .withFailureHandler(handleError)
+          .getAllUsers();
+      }
+      
+      function populateUsersTable(data) {
+        if (!data || data.length === 0) {
+          document.getElementById('usersTableBody').innerHTML = 
+            '<tr><td colspan="6" class="text-center">No users found</td></tr>';
+          return;
+        }
+        
+        users = data;
+        
+        // Extract managers for the dropdown
+        managers = users.filter(user => 
+          user.Role === '<?= USER_ROLES.AGENT_MANAGER ?>' || 
+          user.Role === '<?= USER_ROLES.QA_MANAGER ?>' || 
+          user.Role === '<?= USER_ROLES.ADMIN ?>'
+        );
+        
+        renderUsersTable(users);
+        
+        showNotification('Users loaded successfully', 'success');
+      }
+      
+      function renderUsersTable(usersToRender) {
+        const tableBody = document.getElementById('usersTableBody');
+        tableBody.innerHTML = '';
+        
+        usersToRender.forEach(user => {
+          const row = document.createElement('tr');
+          
+          // Name column
+          const nameCell = document.createElement('td');
+          nameCell.textContent = user.Name;
+          nameCell.dataset.column = 'name';
+          row.appendChild(nameCell);
+          
+          // Email column
+          const emailCell = document.createElement('td');
+          emailCell.textContent = user.Email;
+          emailCell.dataset.column = 'email';
+          row.appendChild(emailCell);
+          
+          // Role column
+          const roleCell = document.createElement('td');
+          roleCell.textContent = translateRole(user.Role);
+          roleCell.dataset.column = 'role';
+          row.appendChild(roleCell);
+          
+          // Department column
+          const departmentCell = document.createElement('td');
+          departmentCell.textContent = user.Department || 'N/A';
+          departmentCell.dataset.column = 'department';
+          row.appendChild(departmentCell);
+          
+          // Manager column
+          const managerCell = document.createElement('td');
+          managerCell.textContent = user.Manager || 'N/A';
+          managerCell.dataset.column = 'manager';
+          row.appendChild(managerCell);
+          
+          // Actions column
+          const actionsCell = document.createElement('td');
+          
+          const editBtn = document.createElement('button');
+          editBtn.className = 'primary btn-sm';
+          editBtn.innerHTML = '<i class="material-icons">edit</i>';
+          editBtn.title = 'Edit User';
+          editBtn.dataset.id = user.ID;
+          editBtn.addEventListener('click', function() {
+            editUser(user.ID);
+          });
+          
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'danger btn-sm';
+          deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+          deleteBtn.title = 'Delete User';
+          deleteBtn.dataset.id = user.ID;
+          deleteBtn.addEventListener('click', function() {
+            deleteUser(user.ID);
+          });
+          
+          actionsCell.appendChild(editBtn);
+          actionsCell.appendChild(document.createTextNode(' '));
+          actionsCell.appendChild(deleteBtn);
+          
+          row.appendChild(actionsCell);
+          
+          tableBody.appendChild(row);
+        });
+      }
+      
+      function filterUsers() {
+        const filterText = document.getElementById('userFilter').value.toLowerCase();
+        
+        // If the filter is empty, show all users
+        if (!filterText) {
+          renderUsersTable(users);
+          return;
+        }
+        
+        // Filter users based on the search text
+        const filteredUsers = users.filter(user => {
+          return user.Name.toLowerCase().includes(filterText) ||
+                 user.Email.toLowerCase().includes(filterText) ||
+                 translateRole(user.Role).toLowerCase().includes(filterText) ||
+                 (user.Department && user.Department.toLowerCase().includes(filterText)) ||
+                 (user.Manager && user.Manager.toLowerCase().includes(filterText));
+        });
+        
+        renderUsersTable(filteredUsers);
+      }
+      
+      function showAddUserModal() {
+        isEditMode = false;
+        document.getElementById('userModalTitle').textContent = 'Add User';
+        document.getElementById('userForm').reset();
+        populateManagerDropdown();
+        document.getElementById('userModal').style.display = 'block';
+      }
+      
+      function editUser(userId) {
+        isEditMode = true;
+        document.getElementById('userModalTitle').textContent = 'Edit User';
+        
+        const user = users.find(u => u.ID === userId);
+        if (!user) {
+          showNotification('User not found', 'error');
+          return;
+        }
+        
+        // Populate the form
+        document.getElementById('userId').value = user.ID;
+        document.getElementById('userName').value = user.Name;
+        document.getElementById('userEmail').value = user.Email;
+        document.getElementById('userRole').value = user.Role;
+        document.getElementById('userDepartment').value = user.Department || '';
+        document.getElementById('userNotes').value = user.Notes || '';
+        
+        // Populate managers dropdown and select current manager
+        populateManagerDropdown();
+        document.getElementById('userManager').value = user.Manager || '';
+        
+        document.getElementById('userModal').style.display = 'block';
+      }
+      
+      function populateManagerDropdown() {
+        const managerSelect = document.getElementById('userManager');
+        
+        // Keep only the empty option and remove the rest
+        managerSelect.innerHTML = '<option value="">-- None --</option>';
+        
+        // Add options for each manager
+        managers.forEach(manager => {
+          const option = document.createElement('option');
+          option.value = manager.Email;
+          option.textContent = `${manager.Name} (${translateRole(manager.Role)})`;
+          managerSelect.appendChild(option);
+        });
+      }
+      
+      function hideUserModal() {
+        document.getElementById('userModal').style.display = 'none';
+      }
+      
+      function saveUser(event) {
+        event.preventDefault();
+        
+        const form = document.getElementById('userForm');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        
+        // Collect form data
+        const userData = {
+          ID: document.getElementById('userId').value,
+          Name: document.getElementById('userName').value,
+          Email: document.getElementById('userEmail').value,
+          Role: document.getElementById('userRole').value,
+          Department: document.getElementById('userDepartment').value,
+          Manager: document.getElementById('userManager').value,
+          Notes: document.getElementById('userNotes').value
+        };
+        
+        showNotification('Saving user...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onUserSaved)
+          .withFailureHandler(handleError)
+          .saveUser(userData);
+      }
+      
+      function onUserSaved(result) {
+        if (result.success) {
+          hideUserModal();
+          loadUsers(); // Reload the users table
+          showNotification(result.message, 'success');
+        } else {
+          showNotification('Error: ' + result.message, 'error');
+        }
+      }
+      
+      function deleteUser(userId) {
+        const user = users.find(u => u.ID === userId);
+        if (!user) {
+          showNotification('User not found', 'error');
+          return;
+        }
+        
+        // Confirm deletion
+        const confirmed = confirm(`Are you sure you want to delete user ${user.Name} (${user.Email})?`);
+        if (!confirmed) return;
+        
+        showNotification('Deleting user...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(onUserDeleted)
+          .withFailureHandler(handleError)
+          .deleteUser(userId);
+      }
+      
+      function onUserDeleted(result) {
+        if (result.success) {
+          loadUsers(); // Reload the users table
+          showNotification(result.message, 'success');
+        } else {
+          showNotification('Error: ' + result.message, 'error');
+        }
+      }
+      
+      function translateRole(roleValue) {
+        // Map role values to readable names
+        const roles = {
+          '<?= USER_ROLES.AGENT ?>': 'Agent',
+          '<?= USER_ROLES.AGENT_MANAGER ?>': 'Agent Manager',
+          '<?= USER_ROLES.QA_ANALYST ?>': 'QA Analyst',
+          '<?= USER_ROLES.QA_MANAGER ?>': 'QA Manager',
+          '<?= USER_ROLES.ADMIN ?>': 'Admin'
+        };
+        
+        return roles[roleValue] || roleValue;
+      }
+      
+      function handleError(error) {
+        console.error('Error:', error);
+        showNotification('Error: ' + error.message, 'error');
+      }
+      
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
