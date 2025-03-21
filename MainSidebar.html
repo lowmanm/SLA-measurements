@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('UI/styles'); ?>
+  </head>
+  <body>
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2><i class="material-icons">assessment</i> QA Platform</h2>
+      </div>
+      
+      <div class="sidebar-content">
+        <div class="sidebar-section">
+          <h3>Quick Actions</h3>
+          <button class="action-button" onclick="showDashboard()">
+            <i class="material-icons">dashboard</i> Dashboard
+          </button>
+          
+          <button class="action-button" id="btnEvaluation" onclick="showEvaluationForm()">
+            <i class="material-icons">rate_review</i> New Evaluation
+          </button>
+          
+          <button class="action-button" id="btnFileDispute" onclick="showDisputeForm()">
+            <i class="material-icons">gavel</i> File Dispute
+          </button>
+          
+          <button class="action-button" id="btnReviewDisputes" onclick="showDisputeReview()">
+            <i class="material-icons">verified</i> Review Disputes
+          </button>
+        </div>
+        
+        <div class="sidebar-section">
+          <h3>Admin</h3>
+          <button class="action-button" id="btnManageQuestions" onclick="showQuestionManager()">
+            <i class="material-icons">format_list_bulleted</i> Manage Questions
+          </button>
+          
+          <button class="action-button" id="btnManageUsers" onclick="showUserManager()">
+            <i class="material-icons">people</i> User Management
+          </button>
+          
+          <button class="action-button" id="btnSettings" onclick="showSettingsPanel()">
+            <i class="material-icons">settings</i> Settings
+          </button>
+        </div>
+        
+        <div class="sidebar-section">
+          <h3>Import/Export</h3>
+          <button class="action-button" id="btnImport" onclick="importFromGmail()">
+            <i class="material-icons">cloud_download</i> Import From Gmail
+          </button>
+          
+          <button class="action-button" id="btnExport" onclick="showExportPanel()">
+            <i class="material-icons">cloud_upload</i> Export Reports
+          </button>
+        </div>
+      </div>
+      
+      <div class="sidebar-footer">
+        <p>Current user: <span id="currentUser"></span></p>
+        <p>Role: <span id="userRole"></span></p>
+      </div>
+    </div>
+    
+    <?!= include('UI/scripts'); ?>
+    <script>
+      // Initialize the sidebar when the page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        google.script.run
+          .withSuccessHandler(onUserInfoLoaded)
+          .withFailureHandler(onError)
+          .getUserInfo();
+      });
+      
+      function onUserInfoLoaded(userInfo) {
+        document.getElementById('currentUser').textContent = userInfo.email;
+        document.getElementById('userRole').textContent = userInfo.role;
+        
+        // Show/hide buttons based on user role
+        const role = userInfo.role;
+        
+        // Hide buttons that the user doesn't have permission for
+        if (role !== '<?= USER_ROLES.QA_ANALYST ?>' && 
+            role !== '<?= USER_ROLES.QA_MANAGER ?>' && 
+            role !== '<?= USER_ROLES.ADMIN ?>') {
+          document.getElementById('btnEvaluation').style.display = 'none';
+        }
+        
+        if (role !== '<?= USER_ROLES.AGENT_MANAGER ?>' && 
+            role !== '<?= USER_ROLES.ADMIN ?>') {
+          document.getElementById('btnFileDispute').style.display = 'none';
+        }
+        
+        if (role !== '<?= USER_ROLES.QA_MANAGER ?>' && 
+            role !== '<?= USER_ROLES.ADMIN ?>') {
+          document.getElementById('btnReviewDisputes').style.display = 'none';
+          document.getElementById('btnImport').style.display = 'none';
+          document.getElementById('btnExport').style.display = 'none';
+        }
+        
+        if (role !== '<?= USER_ROLES.ADMIN ?>') {
+          document.getElementById('btnManageQuestions').style.display = 'none';
+          document.getElementById('btnManageUsers').style.display = 'none';
+          document.getElementById('btnSettings').style.display = 'none';
+        }
+      }
+      
+      function onError(error) {
+        showNotification('Error: ' + error.message, 'error');
+      }
+      
+      // Button click handlers (these call server-side functions)
+      function showDashboard() {
+        google.script.run.showDashboard();
+      }
+      
+      function showEvaluationForm() {
+        google.script.run.showEvaluationForm();
+      }
+      
+      function showDisputeForm() {
+        google.script.run.showDisputeForm();
+      }
+      
+      function showDisputeReview() {
+        google.script.run.showDisputeReview();
+      }
+      
+      function showQuestionManager() {
+        google.script.run.showQuestionManager();
+      }
+      
+      function showUserManager() {
+        google.script.run.showUserManager();
+      }
+      
+      function showSettingsPanel() {
+        google.script.run.showSettingsPanel();
+      }
+      
+      function importFromGmail() {
+        showNotification('Importing data from Gmail...', 'info');
+        google.script.run
+          .withSuccessHandler(function() {
+            showNotification('Import completed', 'success');
+          })
+          .withFailureHandler(onError)
+          .importFromGmail();
+      }
+      
+      function showExportPanel() {
+        google.script.run.showExportPanel();
+      }
+    </script>
+  </body>
+</html>
