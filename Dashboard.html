@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('UI/styles'); ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  </head>
+  <body>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>QA Dashboard</h2>
+        <div class="flex gap-8">
+          <button id="refreshBtn" class="secondary">
+            <i class="material-icons">refresh</i> Refresh
+          </button>
+          <button id="closeBtn" class="secondary">
+            <i class="material-icons">close</i> Close
+          </button>
+        </div>
+      </div>
+      
+      <div class="modal-body">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Audit Queue Summary</h3>
+            <div class="flex gap-8">
+              <select id="queuePeriod">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="dashboard-grid">
+            <div class="metric-card">
+              <div class="metric-label">Total Audits</div>
+              <div class="metric-value" id="totalAudits">-</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">Pending Audits</div>
+              <div class="metric-value" id="pendingAudits">-</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">Evaluated Audits</div>
+              <div class="metric-value" id="evaluatedAudits">-</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">High Priority</div>
+              <div class="metric-value" id="highPriorityAudits">-</div>
+            </div>
+          </div>
+          
+          <div class="progress-bar">
+            <div class="progress-fill" id="queueProgressFill" style="width: 0%"></div>
+          </div>
+          <div class="flex justify-between">
+            <div><span id="queueProgressText">-</span> completed</div>
+            <div>Oldest pending: <span id="oldestPending">-</span> days</div>
+          </div>
+        </div>
+        
+        <!-- Evaluation Summary Card (for QA Manager and Admin) -->
+        <div id="evaluationSummaryCard" class="card" style="display: none;">
+          <div class="card-header">
+            <h3 class="card-title">Evaluation Summary</h3>
+          </div>
+          
+          <div class="dashboard-grid">
+            <div class="metric-card">
+              <div class="metric-label">Average Score</div>
+              <div class="metric-value" id="averageScore">-</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">Passing Rate</div>
+              <div class="metric-value" id="passingRate">-</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">Dispute Rate</div>
+              <div class="metric-value" id="disputeRate">-</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">Pending Disputes</div>
+              <div class="metric-value" id="pendingDisputes">-</div>
+            </div>
+          </div>
+          
+          <div class="chart-container">
+            <canvas id="monthlyTrendsChart"></canvas>
+          </div>
+        </div>
+        
+        <!-- Agent Performance Card (for Agent Managers and Admin) -->
+        <div id="agentPerformanceCard" class="card" style="display: none;">
+          <div class="card-header">
+            <h3 class="card-title">Agent Performance (Current Month)</h3>
+            <div class="flex items-center gap-8">
+              <input type="text" id="agentFilter" placeholder="Filter agents..." style="width: 200px; margin-bottom: 0;">
+            </div>
+          </div>
+          
+          <table id="agentPerformanceTable">
+            <thead>
+              <tr>
+                <th data-sortable data-column="name">Agent</th>
+                <th data-sortable data-column="department">Department</th>
+                <th data-sortable data-column="evaluationCount" data-type="number">Evaluations</th>
+                <th data-sortable data-column="averageScore" data-type="number">Avg. Score</th>
+                <th data-sortable data-column="passingRate" data-type="number">Passing Rate</th>
+              </tr>
+            </thead>
+            <tbody id="agentPerformanceBody">
+              <tr>
+                <td colspan="5" class="text-center">Loading data...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- QA Analyst Card -->
+        <div id="qaAnalystCard" class="card" style="display: none;">
+          <div class="card-header">
+            <h3 class="card-title">My QA Activity</h3>
+          </div>
+          
+          <div class="dashboard-grid">
+            <div class="metric-card">
+              <div class="metric-label">My Evaluations</div>
+              <div class="metric-value" id="myEvaluations">-</div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-label">Pending in Queue</div>
+              <div class="metric-value" id="pendingInQueue">-</div>
+              <button class="action-button" onclick="openEvaluationForm()">
+                <i class="material-icons">rate_review</i> Start New Evaluation
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button id="closeBtn2" class="secondary">Close</button>
+      </div>
+    </div>
+    
+    <?!= include('UI/scripts'); ?>
+    <script>
+      // Initialize the dashboard when the page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        // Setup event listeners
+        document.getElementById('refreshBtn').addEventListener('click', loadDashboardData);
+        document.getElementById('closeBtn').addEventListener('click', closeDialog);
+        document.getElementById('closeBtn2').addEventListener('click', closeDialog);
+        document.getElementById('queuePeriod').addEventListener('change', loadDashboardData);
+        
+        // Load the initial data
+        loadDashboardData();
+        
+        // Setup table filtering if the agent performance card is shown
+        if (document.getElementById('agentPerformanceCard').style.display !== 'none') {
+          setupTableFilter('agentFilter', 'agentPerformanceTable', ['name', 'department']);
+          setupSortableTable('agentPerformanceTable');
+        }
+      });
+      
+      function loadDashboardData() {
+        showNotification('Loading dashboard data...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(updateDashboard)
+          .withFailureHandler(handleError)
+          .getDashboardData();
+      }
+      
+      function updateDashboard(data) {
+        console.log('Dashboard data:', data);
+        
+        // Update Queue Summary
+        const queueSummary = data.queueSummary;
+        document.getElementById('totalAudits').textContent = queueSummary.total;
+        document.getElementById('pendingAudits').textContent = queueSummary.pending;
+        document.getElementById('evaluatedAudits').textContent = queueSummary.evaluated;
+        document.getElementById('highPriorityAudits').textContent = queueSummary.highPriority;
+        
+        // Update progress bar
+        const completionPercentage = queueSummary.total > 0 
+          ? (queueSummary.evaluated / queueSummary.total) * 100 
+          : 0;
+        document.getElementById('queueProgressFill').style.width = completionPercentage + '%';
+        document.getElementById('queueProgressText').textContent = formatPercentage(completionPercentage);
+        document.getElementById('oldestPending').textContent = queueSummary.oldestPendingDays;
+        
+        // Show/hide role-specific sections based on user role
+        if (data.roleAccess === '<?= USER_ROLES.QA_MANAGER ?>' || 
+            data.roleAccess === '<?= USER_ROLES.ADMIN ?>') {
+          // Show QA Manager specific data
+          document.getElementById('evaluationSummaryCard').style.display = 'block';
+          updateEvaluationSummary(data.qaManagerData);
+        }
+        
+        if (data.roleAccess === '<?= USER_ROLES.AGENT_MANAGER ?>' || 
+            data.roleAccess === '<?= USER_ROLES.ADMIN ?>') {
+          // Show Agent Manager specific data
+          document.getElementById('agentPerformanceCard').style.display = 'block';
+          updateAgentPerformance(data.agentManagerData);
+        }
+        
+        if (data.roleAccess === '<?= USER_ROLES.QA_ANALYST ?>') {
+          // Show QA Analyst specific data
+          document.getElementById('qaAnalystCard').style.display = 'block';
+          updateQAAnalystData(data.qaAnalystData);
+        }
+        
+        showNotification('Dashboard updated', 'success');
+      }
+      
+      function updateEvaluationSummary(qaManagerData) {
+        if (!qaManagerData) return;
+        
+        const summary = qaManagerData.evaluationSummary;
+        document.getElementById('averageScore').textContent = formatPercentage(summary.averageScore);
+        document.getElementById('passingRate').textContent = formatPercentage(summary.passingRate);
+        document.getElementById('disputeRate').textContent = formatPercentage(summary.disputeRate);
+        document.getElementById('pendingDisputes').textContent = qaManagerData.pendingDisputes;
+        
+        // Create the monthly trends chart
+        createMonthlyTrendsChart(qaManagerData.monthlyTrends);
+      }
+      
+      function updateAgentPerformance(agentManagerData) {
+        if (!agentManagerData) return;
+        
+        const agentPerformance = agentManagerData.agentPerformance;
+        const tableBody = document.getElementById('agentPerformanceBody');
+        
+        if (agentPerformance.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No agent performance data available</td></tr>';
+          return;
+        }
+        
+        let html = '';
+        for (const agent of agentPerformance) {
+          html += `
+            <tr>
+              <td data-column="name">${agent.name}</td>
+              <td data-column="department">${agent.department || 'N/A'}</td>
+              <td data-column="evaluationCount">${agent.evaluationCount}</td>
+              <td data-column="averageScore">${formatPercentage(agent.averageScore)}</td>
+              <td data-column="passingRate">${formatPercentage(agent.passingRate)}</td>
+            </tr>
+          `;
+        }
+        
+        tableBody.innerHTML = html;
+        
+        // Setup sorting after data is loaded
+        setupSortableTable('agentPerformanceTable');
+      }
+      
+      function updateQAAnalystData(qaAnalystData) {
+        if (!qaAnalystData) return;
+        
+        document.getElementById('myEvaluations').textContent = qaAnalystData.myEvaluations;
+        document.getElementById('pendingInQueue').textContent = qaAnalystData.pendingQueue;
+      }
+      
+      function createMonthlyTrendsChart(monthlyTrends) {
+        if (!monthlyTrends || monthlyTrends.length === 0) return;
+        
+        // Prepare chart data
+        const labels = monthlyTrends.map(m => `${m.month} ${m.year}`);
+        const evaluationCounts = monthlyTrends.map(m => m.evaluationCount);
+        const avgScores = monthlyTrends.map(m => parseFloat(m.avgScore) || 0);
+        const disputeCounts = monthlyTrends.map(m => m.disputeCount);
+        
+        // Get the canvas context
+        const ctx = document.getElementById('monthlyTrendsChart').getContext('2d');
+        
+        // Destroy any existing chart
+        if (window.trendsChart) {
+          window.trendsChart.destroy();
+        }
+        
+        // Create the chart
+        window.trendsChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Evaluations',
+                data: evaluationCounts,
+                backgroundColor: '#4285F4',
+                borderColor: '#4285F4',
+                borderWidth: 1,
+                order: 1
+              },
+              {
+                label: 'Disputes',
+                data: disputeCounts,
+                backgroundColor: '#EA4335',
+                borderColor: '#EA4335',
+                borderWidth: 1,
+                order: 2
+              },
+              {
+                label: 'Avg Score (%)',
+                data: avgScores,
+                backgroundColor: '#0F9D58',
+                borderColor: '#0F9D58',
+                borderWidth: 2,
+                type: 'line',
+                yAxisID: 'y1',
+                tension: 0.2,
+                order: 0
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Count'
+                }
+              },
+              y1: {
+                position: 'right',
+                beginAtZero: true,
+                max: 100,
+                title: {
+                  display: true,
+                  text: 'Score %'
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      function handleError(error) {
+        console.error('Error loading dashboard data:', error);
+        showNotification('Error loading dashboard data: ' + error.message, 'error');
+      }
+      
+      function openEvaluationForm() {
+        google.script.run.showEvaluationForm();
+        closeDialog();
+      }
+      
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
