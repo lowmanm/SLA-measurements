@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Platform Implementation Files</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .header {
+            background-color: #4285f4;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 400;
+        }
+        
+        .header p {
+            margin: 0.5rem 0 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 4px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        }
+        
+        h2 {
+            color: #4285f4;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+        }
+        
+        h2 .material-icons {
+            margin-right: 0.5rem;
+        }
+        
+        .file-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-icon {
+            color: #4285f4;
+            margin-right: 1rem;
+        }
+        
+        .file-link {
+            color: #4285f4;
+            text-decoration: none;
+            font-weight: 500;
+            min-width: 200px;
+            margin-right: 1rem;
+        }
+        
+        .file-link:hover {
+            text-decoration: underline;
+        }
+        
+        .file-description {
+            color: #666;
+            flex: 1;
+        }
+        
+        .instructions {
+            background-color: #e8f0fe;
+            border-left: 4px solid #4285f4;
+        }
+        
+        .instructions h2 {
+            color: #4285f4;
+            margin-top: 0;
+        }
+        
+        .instructions ol {
+            padding-left: 1.5rem;
+        }
+        
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .button {
+            display: inline-flex;
+            align-items: center;
+            background-color: #4285f4;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .button:hover {
+            background-color: #3367d6;
+        }
+        
+        .button .material-icons {
+            margin-right: 0.5rem;
+        }
+        
+        .button.secondary {
+            background-color: #f1f3f4;
+            color: #3c4043;
+        }
+        
+        .button.secondary:hover {
+            background-color: #e8eaed;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: #5f6368;
+            margin-top: 2rem;
+            background-color: #f1f3f4;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div>
+            <h1>QA Platform Implementation Files</h1>
+            <p>A comprehensive quality assurance platform built with Google Apps Script</p>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="card instructions">
+            <h2><i class="material-icons">info</i>Instructions</h2>
+            <p>This page contains all the files needed to implement the QA Platform in Google Apps Script. Follow these steps to set up your platform:</p>
+            <ol>
+                <li>Open your Google Sheet that will serve as the backend for the QA Platform</li>
+                <li>Go to Extensions &gt; Apps Script to open the script editor</li>
+                <li>For each file listed below, create a new script file with the same name and copy-paste the contents</li>
+                <li>After adding all files, save your project</li>
+                <li>Deploy the script by clicking "Deploy" &gt; "New deployment"</li>
+                <li>Choose "Web app" as the deployment type and configure access permissions</li>
+                <li>Return to your Google Sheet and refresh the page</li>
+                <li>Use the custom menu that appears to initialize the platform and begin using it</li>
+            </ol>
+            <p><strong>Note:</strong> Make sure you have the necessary permissions to create and run Apps Script in your Google Workspace environment.</p>
+            
+            <div style="background-color: #ffebee; border-left: 4px solid #f44336; padding: 15px; margin-top: 16px;">
+                <h3 style="color: #d32f2f; margin-top: 0;"><i class="material-icons" style="vertical-align: middle; margin-right: 8px;">warning</i>Important Deployment Note</h3>
+                <p>When deploying as a web app, be sure to:</p>
+                <ul>
+                    <li>Set "Execute as" to either "User accessing the web app" or your account</li>
+                    <li>Set "Who has access" according to your organization's requirements</li>
+                    <li>The <code>doGet()</code> function has been included in Code.gs to serve this index page</li>
+                </ul>
+            </div>
+        </div>
+        
+        <h2><i class="material-icons">code</i>Core Script Files</h2>
+        <div class="card">
+            <ul class="file-list">
+                <li class="file-item">
+                    <i class="material-icons file-icon">javascript</i>
+                    <a href="Code.gs" class="file-link" target="_blank">Code.gs</a>
+                    <span class="file-description">Main entry point. Contains menu creation and global constants.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">database</i>
+                    <a href="DatabaseOperations.gs" class="file-link" target="_blank">DatabaseOperations.gs</a>
+                    <span class="file-description">Core database operations for interacting with the Google Sheet.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">mail</i>
+                    <a href="EmailService.gs" class="file-link" target="_blank">EmailService.gs</a>
+                    <span class="file-description">Email notification functions for evaluations and disputes.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">people</i>
+                    <a href="UserManagement.gs" class="file-link" target="_blank">UserManagement.gs</a>
+                    <span class="file-description">User management and authentication functions.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">assignment</i>
+                    <a href="Evaluation.gs" class="file-link" target="_blank">Evaluation.gs</a>
+                    <span class="file-description">Evaluation creation and management functions.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">gavel</i>
+                    <a href="Dispute.gs" class="file-link" target="_blank">Dispute.gs</a>
+                    <span class="file-description">Dispute creation and resolution functions.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">dashboard</i>
+                    <a href="Dashboard.gs" class="file-link" target="_blank">Dashboard.gs</a>
+                    <span class="file-description">Dashboard data and visualization functions.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">settings</i>
+                    <a href="Admin.gs" class="file-link" target="_blank">Admin.gs</a>
+                    <span class="file-description">Administration functions for settings and system management.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">import_export</i>
+                    <a href="ImportExport.gs" class="file-link" target="_blank">ImportExport.gs</a>
+                    <span class="file-description">Import/export functions for data exchange.</span>
+                </li>
+            </ul>
+        </div>
+        
+        <h2><i class="material-icons">web</i>HTML UI Files</h2>
+        <div class="card">
+            <ul class="file-list">
+                <li class="file-item">
+                    <i class="material-icons file-icon">menu</i>
+                    <a href="UI/MainSidebar.html" class="file-link" target="_blank">UI/MainSidebar.html</a>
+                    <span class="file-description">Main sidebar interface with navigation.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">dashboard</i>
+                    <a href="UI/Dashboard.html" class="file-link" target="_blank">UI/Dashboard.html</a>
+                    <span class="file-description">Dashboard interface with metrics and charts.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">rate_review</i>
+                    <a href="UI/EvaluationForm.html" class="file-link" target="_blank">UI/EvaluationForm.html</a>
+                    <span class="file-description">Evaluation form for QA analysts.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">gavel</i>
+                    <a href="UI/DisputeForm.html" class="file-link" target="_blank">UI/DisputeForm.html</a>
+                    <span class="file-description">Dispute form for managers.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">verified</i>
+                    <a href="UI/DisputeReview.html" class="file-link" target="_blank">UI/DisputeReview.html</a>
+                    <span class="file-description">Dispute review interface for QA managers.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">settings</i>
+                    <a href="UI/AdminPanel.html" class="file-link" target="_blank">UI/AdminPanel.html</a>
+                    <span class="file-description">Admin panel for system configuration.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">people</i>
+                    <a href="UI/UserManagement.html" class="file-link" target="_blank">UI/UserManagement.html</a>
+                    <span class="file-description">User management interface.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">style</i>
+                    <a href="UI/styles.html" class="file-link" target="_blank">UI/styles.html</a>
+                    <span class="file-description">CSS styles for the UI components.</span>
+                </li>
+                <li class="file-item">
+                    <i class="material-icons file-icon">code</i>
+                    <a href="UI/scripts.html" class="file-link" target="_blank">UI/scripts.html</a>
+                    <span class="file-description">Common JavaScript functions for the UI.</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <h2><i class="material-icons">cloud_download</i>Download Options</h2>
+            <p>You can download all files at once or copy them individually:</p>
+            <div>
+                <a href="#" class="button secondary" onclick="alert('This would download a ZIP file with all the source code in a real implementation.')">
+                    <i class="material-icons">archive</i> Download All Files (ZIP)
+                </a>
+                <a href="#" class="button" onclick="alert('This would provide documentation for the QA Platform in a real implementation.')">
+                    <i class="material-icons">description</i> View Documentation
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>QA Platform &copy; 2025 | Developed for Google Sheets</p>
+    </div>
+</body>
+</html>
