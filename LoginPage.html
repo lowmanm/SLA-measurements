@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+    }
+    
+    .login-card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .login-header {
+      margin-bottom: 30px;
+    }
+    
+    .login-header h1 {
+      color: #4285f4;
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 400;
+    }
+    
+    .login-header p {
+      color: #5f6368;
+      margin: 10px 0 0;
+    }
+    
+    .login-logo {
+      margin-bottom: 20px;
+      font-size: 50px;
+      color: #4285f4;
+    }
+    
+    .login-message {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #5f6368;
+    }
+    
+    .login-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+    
+    .login-button:hover {
+      background-color: #3367d6;
+    }
+    
+    .login-button i {
+      margin-right: 8px;
+    }
+    
+    .error-message {
+      color: #d32f2f;
+      margin-top: 20px;
+      text-align: left;
+    }
+    
+    .note {
+      margin-top: 30px;
+      color: #5f6368;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-logo">
+        <i class="material-icons">assessment</i>
+      </div>
+      
+      <div class="login-header">
+        <h1>QA Platform</h1>
+        <p>Quality Assurance Evaluation System</p>
+      </div>
+      
+      <div class="login-message">
+        <p>Please sign in with your Google account to access the QA Platform.</p>
+      </div>
+      
+      <div id="error-message" class="error-message" style="display: none;"></div>
+      
+      <a href="#" id="login-button" class="login-button">
+        <i class="material-icons">login</i> Sign in with Google
+      </a>
+      
+      <div class="note">
+        <p>This application uses Google Authentication to verify your identity.</p>
+        <p>You must be authorized in the system to access the platform.</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    function initLogin() {
+      // Check if there's an error parameter in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const errorMsg = urlParams.get('error');
+      
+      if (errorMsg) {
+        const errorElement = document.getElementById('error-message');
+        errorElement.textContent = decodeURIComponent(errorMsg);
+        errorElement.style.display = 'block';
+      }
+      
+      // Set up login button
+      document.getElementById('login-button').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // In Apps Script web apps, authentication is handled automatically
+        // Here we just redirect to the main app page
+        window.top.location.href = '<?= ScriptApp.getService().getUrl(); ?>';
+      });
+    }
+    
+    document.addEventListener('DOMContentLoaded', initLogin);
+  </script>
+</body>
+</html>
